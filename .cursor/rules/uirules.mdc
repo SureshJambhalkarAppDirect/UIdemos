@@ -1,0 +1,469 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+## 🎨 DESIGN IDENTITY & STANDARDS
+
+### UI Framework: Mantine v7
+- **Primary Framework**: Use Mantine v7 components exclusively
+- **Import Pattern**: Always import from `@mantine/core` and `@tabler/icons-react`
+- **TypeScript**: All components must be fully typed with TypeScript
+
+## 📏 TYPOGRAPHY & TEXT STANDARDS
+
+### Text Sizing Hierarchy
+```tsx
+// Labels & Form Field Labels
+<Text size="xs" fw={600}>Label Text</Text>
+
+// Body Text
+<Text size="sm" fw={400}>Body content</Text>
+
+// Secondary Text
+<Text size="xs" c="dimmed">Secondary information</Text>
+
+// Large Numbers/Counts
+<Text size="2.75rem" fw={700}>123</Text>
+
+// Card Titles
+<Text fw={700} size="lg">Card Title</Text>
+
+// Small Metadata
+<Text size="xs">Metadata</Text>
+```
+
+### Font Weight Standards
+- `fw={600}`: Labels, form field labels, important metadata
+- `fw={700}`: Card titles, large numbers, primary headings
+- `fw={400}`: Regular body text, secondary information
+- `fw={500}`: Button text, links, call-to-action text
+
+### Color Standards
+- Primary text: `c="black"` or default
+- Secondary text: `c="dimmed"`
+- Links/CTAs: `c="#2B8CE6"` or `c="blue"`
+- Success states: `c="green"`
+- Error states: `c="red"`
+- Warning states: `c="orange"`
+
+## 🏗️ LAYOUT & SPACING STANDARDS
+
+### Container Components
+```tsx
+// Card/Paper containers
+<Paper shadow="sm" p={0} radius="md" withBorder>
+  <Box p="md">Content</Box>
+</Paper>
+
+// Card with hover effects
+<Card 
+  withBorder={false}
+  style={{
+    borderRadius: '10px',
+    border: '1px solid #DEE2E6',
+    background: '#FFF',
+    boxShadow: '0px 1px 2px 0px rgba(0, 0, 0, 0.10), 0px 1px 3px 0px rgba(0, 0, 0, 0.05)',
+    transition: 'all 0.2s ease',
+  }}
+>
+```
+
+### Spacing Standards
+```tsx
+// Small gaps between related elements
+gap={2}    // Label to input
+gap={4}    // Very tight spacing
+gap={6}    // Standard label-to-input spacing
+
+// Medium gaps for component sections
+gap="xs"   // 10px
+gap="sm"   // 12px  
+gap="md"   // 16px
+
+// Large gaps for major sections
+gap="lg"   // 20px
+gap="xl"   // 24px
+
+// Margins
+mb="xs"    // 10px bottom margin
+mb="sm"    // 12px bottom margin
+mb="xl"    // 24px bottom margin (between major sections)
+marginBottom: '24px' // Standard section separation
+```
+
+### Flex & Layout Patterns
+```tsx
+// Standard top row with controls
+<Flex justify="space-between" align="flex-end" mb="xs">
+
+// Content areas with proper alignment
+<Flex align="center" gap="sm" style={{ flex: 1 }}>
+
+// Form sections
+<Group grow gap="sm" align="flex-start">
+
+// Card grid layouts
+<SimpleGrid cols={5} spacing={24}>
+
+// Vertical stacking
+<Stack gap={6}>
+```
+
+## 🎛️ FORM & INPUT STANDARDS
+
+### Input Components
+```tsx
+// Standard form inputs
+<TextInput
+  placeholder="Search applicants"
+  size="xs"
+  styles={{
+    input: { height: 30 }
+  }}
+/>
+
+// Select dropdowns
+<Select
+  size="xs"
+  rightSection={<IconChevronDown size={14} />}
+  styles={{
+    input: { height: 30 }
+  }}
+  data={[
+    { value: 'option1', label: 'Option 1' },
+    { value: 'option2', label: 'Option 2' }
+  ]}
+/>
+
+// Form field with label
+<Stack gap={6}>
+  <Text size="xs" fw={600}>Field Label</Text>
+  <Select /* input props */ />
+</Stack>
+```
+
+### Interactive Elements
+```tsx
+// Primary buttons
+<Button size="sm" leftSection={<IconPlus size={14} />}>
+  Add Seats
+</Button>
+
+// Secondary buttons  
+<Button variant="outline" size="sm">
+  Update Subscription
+</Button>
+
+// Subtle action buttons
+<Button variant="subtle" size="xs" color="blue" px={0} h={30}>
+  Clear filters
+</Button>
+
+// Action icons
+<ActionIcon variant="outline" size={30} color="gray">
+  <IconFilter size={14} />
+</ActionIcon>
+```
+
+## 🏷️ STATUS & BADGE STANDARDS
+
+### Status Badges
+```tsx
+// Standard status colors
+const statusColors = {
+  active: '#40C057',     // Green
+  expired: '#FA5252',    // Red  
+  suspended: '#FD7E14',  // Orange
+  pending: '#FFD43B',    // Yellow
+  cancelled: '#868E96',  // Gray
+  'free_trial': '#8B5CF6' // Purple
+};
+
+// Status badge implementation
+<Badge
+  variant="outline"
+  color="blue"
+  size="xs"
+  style={{
+    textTransform: 'uppercase',
+    fontWeight: 'bold',
+    fontSize: '10px',
+    height: '20px',
+  }}
+>
+  STATUS TEXT
+</Badge>
+```
+
+### Filter Chips/Pills
+```tsx
+<Badge
+  variant="outline"
+  color="gray"
+  size="md"
+  radius="xl"
+  leftSection={
+    <ActionIcon 
+      size={10} 
+      variant="transparent" 
+      onClick={onRemove}
+    >
+      <IconX size={10} />
+    </ActionIcon>
+  }
+  styles={{
+    root: { height: 23, paddingLeft: 6 }
+  }}
+>
+  Filter Label
+</Badge>
+```
+
+## 🎯 COMPONENT PATTERNS
+
+### Card Components
+```tsx
+// Standard subscription card structure
+<Paper shadow="sm" padding="lg" radius="md" withBorder>
+  <Group justify="space-between" align="flex-start">
+    <Group align="flex-start" gap="md">
+      {/* Logo/Icon */}
+      <Image width={42} height={42} style={{ borderRadius: 2 }} />
+      
+      {/* Content */}
+      <Stack gap="sm" style={{ flex: 1 }}>
+        <Stack gap={4}>
+          <Text fw={700} size="lg">Title</Text>
+          {/* Metadata rows */}
+        </Stack>
+      </Stack>
+    </Group>
+    
+    {/* Actions */}
+    <Stack align="flex-end" gap="md">
+      {/* Buttons */}
+      {/* Status indicators */}
+    </Stack>
+  </Group>
+</Paper>
+```
+
+### Summary/Stats Cards
+```tsx
+<Card 
+  style={{
+    padding: '24px',
+    borderRadius: '10px',
+    border: '1px solid #DEE2E6',
+    height: '180px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  }}
+>
+  <Text size="2.75rem" fw={700}>123</Text>
+  <Text size="sm" fw={400}>Subscriptions</Text>
+  
+  <Group gap={5}>
+    <Box w={12} h={12} style={{ borderRadius: '50%', backgroundColor: color }} />
+    <Text size="sm">Status Text</Text>
+  </Group>
+</Card>
+```
+
+### Filter/Search Components
+```tsx
+<Paper shadow="sm" p={0} radius="md" withBorder style={{ width: '100%', marginBottom: '24px' }}>
+  <Box p="md">
+    <Flex justify="space-between" align="flex-end" mb="xs">
+      {/* Filter + Search */}
+      {/* Sort dropdown */}
+    </Flex>
+    
+    <Flex wrap="wrap" align="center" gap="sm" pt="sm">
+      {/* Clear filters + Active chips + Results count */}
+    </Flex>
+  </Box>
+  
+  <Box px="md" pb="md">
+    <Group grow gap="sm" align="flex-start">
+      {/* Filter dropdowns */}
+    </Group>
+  </Box>
+</Paper>
+```
+
+## 🎨 COLOR PALETTE
+
+### Primary Colors
+- Blue: `#228BE6` / `#2B8CE6` (links, primary actions)
+- Green: `#40C057` (success, active states)
+- Red: `#FA5252` (errors, critical states)
+- Orange: `#FD7E14` (warnings, suspended)
+- Yellow: `#FFD43B` (pending states)
+- Purple: `#8B5CF6` (free trial, special states)
+- Gray: `#868E96` (disabled, cancelled)
+
+### Background Colors
+- Card backgrounds: `#FFF`
+- Page background: Default Mantine
+- Border color: `#DEE2E6`
+- Hover backgrounds: `#f8f9fa`
+
+### Text Colors  
+- Primary: `black` or default
+- Secondary: `dimmed`
+- Muted: `#adb5bd`
+- Interactive: `#228BE6`
+
+## 🔧 TECHNICAL STANDARDS
+
+### Import Organization
+```tsx
+// React first
+import React, { useState, useEffect } from 'react';
+
+// Mantine components (alphabetical)
+import {
+  ActionIcon,
+  Badge,
+  Box,
+  Button,
+  Flex,
+  Group,
+  Paper,
+  Select,
+  Stack,
+  Text,
+  TextInput,
+} from '@mantine/core';
+
+// Tabler icons
+import { IconFilter, IconSearch, IconX } from '@tabler/icons-react';
+
+// Local imports
+import { LocalComponent } from './LocalComponent';
+import { Type } from '../../types/type';
+```
+
+### Component Structure
+```tsx
+interface ComponentProps {
+  // Props definition with proper typing
+}
+
+const Component: React.FC<ComponentProps> = ({ 
+  prop1,
+  prop2,
+  onAction,
+}) => {
+  // State declarations
+  // useEffect hooks
+  // Event handlers
+  // Helper functions
+  
+  return (
+    // JSX with proper indentation and organization
+  );
+};
+
+export default Component;
+```
+
+### Responsive Design
+- Use Mantine's responsive props: `cols={{ base: 1, sm: 2, lg: 5 }}`
+- Implement proper breakpoints
+- Ensure mobile-first responsive behavior
+- Test across different screen sizes
+
+## ⚡ PERFORMANCE STANDARDS
+
+### Optimization Requirements
+- Use `React.memo()` for expensive components
+- Implement proper key props for lists
+- Debounce search inputs with 300ms delay
+- Lazy load heavy components when possible
+- Minimize re-renders with proper dependency arrays
+
+### Image Handling
+```tsx
+<Image
+  src={imageUrl}
+  alt="Descriptive alt text"
+  width={42}
+  height={42}
+  style={{ objectFit: 'contain', borderRadius: 2 }}
+  onError={handleImageError}
+  fallbackSrc="fallback-url"
+/>
+```
+
+## 🧪 TESTING STANDARDS
+
+### Component Testing
+- Include `data-testid` attributes for testing
+- Test user interactions and state changes
+- Mock external dependencies
+- Test error states and edge cases
+
+### Accessibility
+- Include proper ARIA labels
+- Ensure keyboard navigation works
+- Maintain proper color contrast ratios
+- Test with screen readers
+
+## 🚫 AVOID THESE PATTERNS
+
+### ❌ Don't Use
+- Custom CSS classes (use Mantine styling props)
+- Inline styles for complex styling (use Mantine's style prop)
+- Non-Mantine UI components unless absolutely necessary
+- Hardcoded pixel values (use Mantine spacing)
+- Magic numbers in styling
+
+### ❌ Typography Don'ts
+- Don't use sizes other than: `xs`, `sm`, `md`, `lg`, `xl`, `2.75rem`
+- Don't use font weights other than: `400`, `500`, `600`, `700`
+- Don't use custom font families
+- Don't use CSS for text styling when Mantine props exist
+
+### ❌ Layout Don'ts  
+- Don't use CSS Grid directly (use Mantine Grid)
+- Don't use CSS Flexbox directly (use Mantine Flex/Group/Stack)
+- Don't hardcode spacing values
+- Don't create custom spacing systems
+
+## ✅ ENFORCEMENT RULES
+
+### MUST Follow
+1. **Every new component MUST use Mantine v7 components**
+2. **Every text element MUST use standardized sizing and weights**
+3. **Every layout MUST use Mantine layout components**
+4. **Every spacing MUST use standard gap/margin values**
+5. **Every color MUST use the defined color palette**
+6. **Every interactive element MUST follow the interaction patterns**
+7. **Every component MUST be fully TypeScript typed**
+8. **Every component MUST follow the import organization**
+
+### Code Review Checklist
+- [ ] Uses only Mantine components
+- [ ] Follows typography standards
+- [ ] Uses standard spacing values
+- [ ] Implements proper responsive design
+- [ ] Includes proper TypeScript typing
+- [ ] Follows component structure patterns
+- [ ] Implements accessibility features
+- [ ] Includes proper error handling
+- [ ] Uses standard color palette
+- [ ] Follows performance best practices
+
+## 🎯 DESIGN PHILOSOPHY
+
+This design system prioritizes:
+1. **Consistency**: Every component follows the same patterns
+2. **Accessibility**: All components are usable by everyone
+3. **Performance**: Fast, efficient, and responsive
+4. **Maintainability**: Clear, predictable, and scalable code
+5. **User Experience**: Intuitive and delightful interactions
+
+**Remember**: Every line of code should reflect these standards. When in doubt, look at existing components that follow these patterns and maintain consistency above all else. 

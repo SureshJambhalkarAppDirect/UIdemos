@@ -14,6 +14,7 @@ import {
   SimpleGrid,
   Pagination,
   Notification,
+  Select,
 } from '@mantine/core';
 import { IconInfoCircle, IconCheck, IconX } from '@tabler/icons-react';
 
@@ -80,7 +81,8 @@ const mockSearchResults = [
 const LinkedMembershipPage = () => {
   const [mode, setMode] = useState('join');
   const [searchTerm, setSearchTerm] = useState('');
-  const [newLMName, setNewLMName] = useState('');
+  const [newLMName, setNewLMName] = useState('Federal Government Purchasing Group');
+  const [newLMType, setNewLMType] = useState('Standard');
   const [searchResults, setSearchResults] = useState<typeof mockSearchResults>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -147,6 +149,17 @@ const LinkedMembershipPage = () => {
 
   const handleCloseBanner = () => {
     setShowSuccessBanner(false);
+  };
+
+  const handleCreateNew = () => {
+    // Handle create new logic here
+    console.log('Creating new LM:', { name: newLMName, type: newLMType });
+  };
+
+  const handleCancel = () => {
+    // Reset form or handle cancel logic
+    setNewLMName('');
+    setNewLMType('Standard');
   };
 
   // If enrolled, show read-only state
@@ -256,13 +269,13 @@ const LinkedMembershipPage = () => {
                       <Paper key={lm.id} withBorder p="md" radius="md">
                         <Group justify="space-between" align="flex-start" mb="xs">
                           <Text fw={600} size="md">{lm.name}</Text>
-                                                  <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleEnroll(lm)}
-                        >
-                          Enroll
-                        </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleEnroll(lm)}
+                          >
+                            Enroll
+                          </Button>
                         </Group>
                         <Text size="sm" c="dimmed">
                           LM type: {lm.type} | Creation Date: {lm.creationDate}
@@ -292,25 +305,101 @@ const LinkedMembershipPage = () => {
       )}
 
       {mode === 'create' && (
-        <Stack gap="md">
-          <Alert icon={<IconInfoCircle size="1rem" />} color="green" variant="light">
-            Creating new Linked Membership for {companyCountry}
-          </Alert>
-          
-          <Group gap="md">
-            <TextInput
-              placeholder="Enter a name for the new Linked Membership"
-              value={newLMName}
-              onChange={(e) => setNewLMName(e.target.value)}
-              style={{ flex: 1 }}
-            />
-            <Button 
-              disabled={!newLMName.trim()}
+        <Paper withBorder p="lg" radius="md">
+          <Stack gap="lg">
+            <Alert 
+              icon={<IconInfoCircle size="1rem" />} 
+              color="blue" 
+              variant="light"
+              styles={{
+                root: {
+                  backgroundColor: '#E3F2FD',
+                  border: '1px solid #BBDEFB'
+                }
+              }}
             >
-              Create
-            </Button>
-          </Group>
-        </Stack>
+              <Text size="sm">
+                Adobe customer can participate in only one VIP program at a time. Switch to{' '}
+                <Anchor href="#" size="sm" style={{ color: '#1976D2' }}>
+                  3-Year Commit
+                </Anchor>
+                .
+              </Text>
+            </Alert>
+
+            <Box>
+              <Text size="sm" fw={500} mb="xs">
+                <Text component="span" c="red">*</Text> Linked Membership name
+              </Text>
+              <TextInput
+                value={newLMName}
+                onChange={(e) => setNewLMName(e.target.value)}
+                placeholder="Enter membership name"
+                size="sm"
+                styles={{
+                  input: {
+                    backgroundColor: '#F5F5F5',
+                    border: '1px solid #E0E0E0'
+                  }
+                }}
+              />
+              <Text size="xs" c="dimmed" mt="xs">
+                Identifies your organization's membership in Adobe's Value Incentive Plan (VIP). This name is typically the name of your organization.
+              </Text>
+            </Box>
+
+            <Box>
+              <Text size="sm" fw={500} mb="xs">
+                <Text component="span" c="red">*</Text> Linked Membership type
+              </Text>
+              <Select
+                value={newLMType}
+                onChange={(value) => setNewLMType(value || 'Standard')}
+                data={[
+                  { value: 'Standard', label: 'Standard' },
+                  { value: 'Consortium', label: 'Consortium' }
+                ]}
+                placeholder="Select membership type"
+                size="sm"
+                styles={{
+                  input: {
+                    backgroundColor: '#F5F5F5',
+                    border: '1px solid #E0E0E0'
+                  }
+                }}
+              />
+              <Text size="xs" c="dimmed" mt="xs">
+                Select the type of membership
+              </Text>
+            </Box>
+
+            <Group gap="md" mt="lg">
+              <Button 
+                onClick={handleCreateNew}
+                disabled={!newLMName.trim()}
+                style={{
+                  backgroundColor: '#4FC3F7',
+                  border: 'none'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#29B6F6';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#4FC3F7';
+                }}
+              >
+                Apply Linked Membership
+              </Button>
+              <Button 
+                variant="subtle"
+                color="gray"
+                onClick={handleCancel}
+              >
+                Cancel
+              </Button>
+            </Group>
+          </Stack>
+        </Paper>
       )}
     </Box>
   );

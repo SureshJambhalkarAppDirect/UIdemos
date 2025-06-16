@@ -1,5 +1,5 @@
 import React from 'react';
-import { Paper, Title, Text, Group, Box, SimpleGrid, Button, Anchor, Divider, Stack } from '@mantine/core';
+import { Paper, Title, Text, Group, Box, SimpleGrid, Button, Anchor, Divider, Stack, Center, ActionIcon } from '@mantine/core';
 import { IconDots } from '@tabler/icons-react';
 import LinkedMembershipPage from './LinkedMembershipPage';
 
@@ -86,6 +86,56 @@ const ProgramCard = ({ title, findOutMore, children, ctaText }: { title: string,
     </Paper>
 );
 
+const AppDirectFooter = () => (
+  <Box
+    style={{
+      backgroundColor: '#F5F5F5',
+      borderTop: '1px solid #E5E5E5',
+      marginTop: '3rem',
+      padding: '1rem 0'
+    }}
+  >
+    <Center>
+      <Group justify="space-between" style={{ width: '100%', maxWidth: '1200px', padding: '0 2rem' }}>
+        <Group>
+          <Group gap="xs">
+            <Box
+              style={{
+                width: 24,
+                height: 24,
+                backgroundColor: '#000',
+                clipPath: 'polygon(0 0, 100% 50%, 0 100%)',
+                transform: 'rotate(0deg)'
+              }}
+            />
+            <Text size="sm" fw={500}>
+              Powered by{' '}
+              <Text component="span" fw={700}>
+                AppDirect
+              </Text>
+            </Text>
+          </Group>
+        </Group>
+        
+        <Group gap="lg" style={{ flex: 1, justifyContent: 'center' }}>
+          <Text size="sm" c="dimmed">© 2025 AppDistribution</Text>
+          <Anchor href="#" size="sm" c="dimmed">Contact</Anchor>
+          <Anchor href="#" size="sm" c="dimmed">Help Center</Anchor>
+          <Anchor href="#" size="sm" c="dimmed">Privacy Policy</Anchor>
+          <Anchor href="#" size="sm" c="dimmed">Terms & Conditions</Anchor>
+        </Group>
+        
+        <Group>
+          <Text size="sm" c="dimmed">English (United States)</Text>
+          <ActionIcon variant="subtle" size="sm">
+            <IconDots size={16} />
+          </ActionIcon>
+        </Group>
+      </Group>
+    </Center>
+  </Box>
+);
+
 const CustomerDetailsPage = () => {
   return (
     <Box>
@@ -103,6 +153,7 @@ const CustomerDetailsPage = () => {
                 <LinkedMembershipPage/>
             </Box>
         </SimpleGrid>
+        <AppDirectFooter />
     </Box>
   );
 };
