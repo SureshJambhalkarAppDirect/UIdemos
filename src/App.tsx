@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { Button, Group, Box, AppShell, Burger } from '@mantine/core';
+import { Button, Group, Box, AppShell, Burger, Stack } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import AdditionalInfoModal from './AdditionalInfoModal';
 import LinkedMembershipPage from './LinkedMembershipPage';
+import MarketplaceInterface from './MarketplaceInterface';
 import CustomerDetailsPage from './CustomerDetailsPage';
 import DummySidebar from './DummySidebar';
 import LandingPage from './LandingPage';
 
 function App() {
   const [modalOpened, setModalOpened] = useState(false);
+  const [modalScenario, setModalScenario] = useState<'visible' | 'hidden' | null>(null);
   const [view, setView] = useState('home'); // 'home', 'modal', 'lm', or 'customerDetails'
   const [opened, { toggle }] = useDisclosure();
 
@@ -16,71 +18,129 @@ function App() {
     setView(demo);
   };
 
-  const isLandingPage = view === 'home';
+  const handleOpenModal = (scenario: 'visible' | 'hidden') => {
+    setModalScenario(scenario);
+    setModalOpened(true);
+  };
 
-  const demos = (
-    <Box p="md">
+  const handleCloseModal = () => {
+    setModalOpened(false);
+    setModalScenario(null);
+  };
+
+  // Mock data scenarios
+  const mockDataScenarios = {
+    visible: {
+      anniversaryDate: '2025-07-01', // Within AD-30 window (about 15 days from June 16, 2025)
+      hasLinkedMembership: false, // Not part of LM
+      has3YCCommitment: false, // Not committed to 3YC
+      renewalQuantity: 150, // >100
+      defaultMarketSegment: 'Government', // Government
+      defaultMarketSubSegment: 'Federal', // Sub-segment selected
+      defaultCountry: 'United States' // US/Canada
+    },
+    hidden: {
+      anniversaryDate: '2025-08-15', // Beyond AD-30 window (60+ days)
+      hasLinkedMembership: true, // Part of active LM
+      has3YCCommitment: true, // Committed to 3YC
+      renewalQuantity: 50, // <=100
+      defaultMarketSegment: 'Commercial', // Not Government
+      defaultMarketSubSegment: '', // No sub-segment
+      defaultCountry: 'Mexico' // Not US/Canada
+    }
+  };
+
+  const isLandingPage = view === 'home';
+  const shouldHideSidebar = view === 'home' || view === 'modal' || view === 'lm';
+
+  const demos = view === 'modal' ? (
+    <Box style={{ height: '100%', width: '100%' }}>
+      <MarketplaceInterface 
+        mockDataScenarios={mockDataScenarios} 
+        onNavigate={setView}
+      />
+    </Box>
+  ) : (
+    <Box p="md" style={{ 
+      maxWidth: shouldHideSidebar ? '1200px' : 'none',
+      margin: shouldHideSidebar ? '0 auto' : '0',
+      width: '100%'
+    }}>
       {!isLandingPage && (
         <Group mb="xl">
           <Button onClick={() => setView('home')} variant={view === 'home' ? 'filled' : 'outline'} size="xs">
             🏠 Home
           </Button>
           <Button onClick={() => setView('modal')} variant={view === 'modal' ? 'filled' : 'outline'} size="xs">
-            Demo 1: Modal
+            Case: Create and Convert
           </Button>
           <Button onClick={() => setView('lm')} variant={view === 'lm' ? 'filled' : 'outline'} size="xs">
-            Demo 2: LM Flow
+            Case: Join existing LM
           </Button>
            <Button onClick={() => setView('customerDetails')} variant={view === 'customerDetails' ? 'filled' : 'outline'} size="xs">
-            Demo 3: Full Page
+            Full Page
           </Button>
         </Group>
       )}
 
       {view === 'home' && <LandingPage onNavigateToDemo={handleNavigateToDemo} />}
 
-      {view === 'modal' && (
-        <>
-          <AdditionalInfoModal
-            opened={modalOpened}
-            onClose={() => setModalOpened(false)}
-          />
-          <Button onClick={() => setModalOpened(true)}>
-            Show Additional Information
-          </Button>
-        </>
-      )}
-
       {view === 'lm' && <LinkedMembershipPage />}
       {view === 'customerDetails' && <CustomerDetailsPage />}
     </Box>
   );
 
+  const showTopNavigation = view !== 'home'; // Only show for AC-14371 cases, not landing page
+
   return (
-    <AppShell
-      header={{ height: 60 }}
-      navbar={{ 
-        width: 300, 
-        breakpoint: 'sm', 
-        collapsed: { mobile: !opened, desktop: isLandingPage } 
-      }}
-      padding="md"
-    >
-      <AppShell.Header>
-        <Group h="100%" px="md">
-          {!isLandingPage && (
-            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-          )}
-          {/* You can add a header here if needed */}
-        </Group>
-      </AppShell.Header>
-      {!isLandingPage && (
-        <AppShell.Navbar p="md">
-          <DummySidebar />
-        </AppShell.Navbar>
+    <>
+      {/* AC-14371 Context Navigation - Only for cases */}
+      {showTopNavigation && (
+        <Box style={{ backgroundColor: 'white', borderBottom: '1px solid #e0e0e0', padding: '8px 16px', position: 'sticky', top: 0, zIndex: 1000 }}>
+          <Group>
+            <Button onClick={() => setView('home')} variant={view === 'home' ? 'filled' : 'outline'} size="xs">
+              🏠 Home
+            </Button>
+            <Button onClick={() => setView('modal')} variant={view === 'modal' ? 'filled' : 'outline'} size="xs">
+              Case: Create and Convert
+            </Button>
+            <Button onClick={() => setView('lm')} variant={view === 'lm' ? 'filled' : 'outline'} size="xs">
+              Case: Join existing LM
+            </Button>
+            <Button onClick={() => setView('customerDetails')} variant={view === 'customerDetails' ? 'filled' : 'outline'} size="xs">
+              Full Page
+            </Button>
+          </Group>
+        </Box>
       )}
-      <AppShell.Main>{demos}</AppShell.Main>
-    </AppShell>
+
+      <AppShell
+        header={view === 'modal' || view === 'home' ? undefined : { height: 60 }}
+        navbar={{ 
+          width: 300, 
+          breakpoint: 'sm', 
+          collapsed: { mobile: !opened, desktop: shouldHideSidebar } 
+        }}
+        padding="md"
+      >
+        {view !== 'modal' && view !== 'home' && (
+          <AppShell.Header>
+            <Group h="100%" px="md">
+              {!shouldHideSidebar && (
+                <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+              )}
+              {/* You can add a header here if needed */}
+            </Group>
+          </AppShell.Header>
+        )}
+        {!shouldHideSidebar && (
+          <AppShell.Navbar p="md">
+            <DummySidebar />
+          </AppShell.Navbar>
+        )}
+        <AppShell.Main>{demos}</AppShell.Main>
+      </AppShell>
+    </>
   );
 }
 

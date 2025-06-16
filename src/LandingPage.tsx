@@ -9,18 +9,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToDemo }) => {
   const napkins = [
     {
       id: 'modal',
-      demo: 'Demo 1: Modal',
+      demo: 'AC-14371: Large Government Agencies',
       color: '#0629D3' // Royal blue from the palette
-    },
-    {
-      id: 'lm',
-      demo: 'Demo 2: LM Flow',
-      color: '#014929' // Forest green from the palette
-    },
-    {
-      id: 'customerDetails',
-      demo: 'Demo 3: Full Page',
-      color: '#5326A5' // Purple from the palette
     }
   ];
 
@@ -170,9 +160,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToDemo }) => {
         </Stack>
 
         {/* Napkins Grid */}
-        <Grid gutter="xl">
+        <Grid gutter="xl" justify="center">
           {napkins.map((napkin, index) => (
-            <Grid.Col key={napkin.id} span={{ base: 12, md: 4 }}>
+            <Grid.Col key={napkin.id} span={{ base: 12, md: 6, lg: 4 }}>
               <NapkinCard napkin={napkin} index={index} />
             </Grid.Col>
           ))}
