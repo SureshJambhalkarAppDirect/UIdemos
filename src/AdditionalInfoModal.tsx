@@ -17,9 +17,10 @@ interface AdditionalInfoModalProps {
   onClose: () => void;
   mockData?: MockData;
   scenario?: string;
+  onSave?: (data: any) => void;
 }
 
-const AdditionalInfoModal = ({ opened, onClose, mockData, scenario }: AdditionalInfoModalProps) => {
+const AdditionalInfoModal = ({ opened, onClose, mockData, scenario, onSave }: AdditionalInfoModalProps) => {
   // Use provided mock data or defaults
   const defaultMockData: MockData = {
     anniversaryDate: '2025-02-15',
@@ -147,12 +148,32 @@ const AdditionalInfoModal = ({ opened, onClose, mockData, scenario }: Additional
           required
           withAsterisk
           size="xs"
+          styles={{
+            label: { 
+              backgroundColor: '#fff3cd', 
+              padding: '2px 6px', 
+              borderRadius: '3px', 
+              border: '1px solid #ffeaa7',
+              fontWeight: 600,
+              color: '#856404'
+            },
+            input: {
+              border: '2px solid #ffeaa7'
+            }
+          }}
         />
         {marketSegment === 'Government' && (country === 'United States' || country === 'Canada') && (
           <div>
             <Group gap="xs" mb="xs">
-              <Text size="xs" fw={500}>
-                Market Sub Segment
+              <Text size="xs" fw={500} style={{
+                backgroundColor: '#fff3cd', 
+                padding: '2px 6px', 
+                borderRadius: '3px', 
+                border: '1px solid #ffeaa7',
+                fontWeight: 600,
+                color: '#856404'
+              }}>
+                Market subsegment
               </Text>
               <Tooltip 
                 label={
@@ -184,6 +205,11 @@ const AdditionalInfoModal = ({ opened, onClose, mockData, scenario }: Additional
               onChange={(value) => setMarketSubSegment(value || '')}
               data={['Federal', 'State']}
               size="xs"
+              styles={{
+                input: {
+                  border: '2px solid #ffeaa7'
+                }
+              }}
             />
           </div>
         )}
@@ -191,7 +217,14 @@ const AdditionalInfoModal = ({ opened, onClose, mockData, scenario }: Additional
         {shouldShowLGAConversion() && (
           <div>
             <Group gap="xs" mb="xs">
-              <Text size="xs" fw={500}>
+              <Text size="xs" fw={500} style={{
+                backgroundColor: '#fff3cd', 
+                padding: '2px 6px', 
+                borderRadius: '3px', 
+                border: '1px solid #ffeaa7',
+                fontWeight: 600,
+                color: '#856404'
+              }}>
                 Convert to LGA from the next term?
               </Text>
               <Tooltip 
@@ -212,6 +245,13 @@ const AdditionalInfoModal = ({ opened, onClose, mockData, scenario }: Additional
               value={convertToLGA}
               onChange={setConvertToLGA}
               size="xs"
+              styles={{
+                root: {
+                  border: '2px solid #ffeaa7',
+                  borderRadius: '4px',
+                  padding: '8px'
+                }
+              }}
             >
               <Group gap="md">
                 <Radio value="yes" label="Yes" />
@@ -252,7 +292,7 @@ const AdditionalInfoModal = ({ opened, onClose, mockData, scenario }: Additional
           <Button variant="outline" onClick={onClose} size="sm">
             Cancel
           </Button>
-          <Button onClick={onClose} size="sm">Save Details</Button>
+          <Button onClick={() => onSave?.(currentMockData)} size="sm">Save Details</Button>
         </Group>
       </Stack>
     </Modal>

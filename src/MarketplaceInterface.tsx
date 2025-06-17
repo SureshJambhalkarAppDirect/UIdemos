@@ -81,6 +81,14 @@ const MarketplaceInterface: React.FC<MarketplaceInterfaceProps> = ({ mockDataSce
     setModalOpened(true);
   };
 
+  const handleSaveDetails = (data: any) => {
+    setModalOpened(false);
+    // Navigate to customer details view
+    if (onNavigate) {
+      onNavigate('customerDetails');
+    }
+  };
+
   return (
     <Box style={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       {/* Adobe Marketplace Navigation */}
@@ -224,6 +232,7 @@ const MarketplaceInterface: React.FC<MarketplaceInterfaceProps> = ({ mockDataSce
             onClose={() => setModalOpened(false)}
             mockData={getCurrentMockData()}
             scenario={activeTab === 'applicable' ? 'LGA Field Visible' : 'LGA Field Hidden'}
+            onSave={handleSaveDetails}
           />
         </Box>
       </Group>

@@ -52,6 +52,7 @@ function App() {
 
   const isLandingPage = view === 'home';
   const shouldHideSidebar = view === 'home' || view === 'modal' || view === 'lm';
+  const showTopNavigation = view !== 'home'; // Only show for AC-14371 cases, not landing page
 
   const demos = view === 'modal' ? (
     <Box style={{ height: '100%', width: '100%' }}>
@@ -61,28 +62,13 @@ function App() {
       />
     </Box>
   ) : (
-    <Box p="md" style={{ 
+    <Box style={{ 
       maxWidth: shouldHideSidebar ? '1200px' : 'none',
       margin: shouldHideSidebar ? '0 auto' : '0',
-      width: '100%'
+      width: '100%',
+      padding: view === 'lm' ? '0 16px' : 0,
+      marginTop: view === 'lm' ? '-16px' : 0
     }}>
-      {!isLandingPage && (
-        <Group mb="xl">
-          <Button onClick={() => setView('home')} variant={view === 'home' ? 'filled' : 'outline'} size="xs">
-            🏠 Home
-          </Button>
-          <Button onClick={() => setView('modal')} variant={view === 'modal' ? 'filled' : 'outline'} size="xs">
-            Case: Create and Convert
-          </Button>
-          <Button onClick={() => setView('lm')} variant={view === 'lm' ? 'filled' : 'outline'} size="xs">
-            Case: Join existing LM
-          </Button>
-           <Button onClick={() => setView('customerDetails')} variant={view === 'customerDetails' ? 'filled' : 'outline'} size="xs">
-            Full Page
-          </Button>
-        </Group>
-      )}
-
       {view === 'home' && <LandingPage onNavigateToDemo={handleNavigateToDemo} />}
 
       {view === 'lm' && <LinkedMembershipPage />}
@@ -90,13 +76,11 @@ function App() {
     </Box>
   );
 
-  const showTopNavigation = view !== 'home'; // Only show for AC-14371 cases, not landing page
-
   return (
     <>
       {/* AC-14371 Context Navigation - Only for cases */}
       {showTopNavigation && (
-        <Box style={{ backgroundColor: 'white', borderBottom: '1px solid #e0e0e0', padding: '8px 16px', position: 'sticky', top: 0, zIndex: 1000 }}>
+        <Box style={{ backgroundColor: 'white', padding: '8px 16px', position: 'sticky', top: 0, zIndex: 1000 }}>
           <Group>
             <Button onClick={() => setView('home')} variant={view === 'home' ? 'filled' : 'outline'} size="xs">
               🏠 Home

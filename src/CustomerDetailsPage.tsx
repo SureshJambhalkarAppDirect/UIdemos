@@ -31,11 +31,11 @@ const CustomerInfo = () => (
     <SimpleGrid cols={2} verticalSpacing="lg">
       <Box>
         <Text size="xs" c="dimmed">Current discount levels - licenses</Text>
-        <Text fw={500}>-</Text>
+        <Text fw={500}>Level 01</Text>
       </Box>
       <Box>
         <Text size="xs" c="dimmed">Current discount levels - consumables</Text>
-        <Text fw={500}>-</Text>
+        <Text fw={500}>Tier T1</Text>
       </Box>
       <Box>
         <Text size="xs" c="dimmed">Preferred language</Text>
@@ -53,6 +53,30 @@ const CustomerInfo = () => (
         <Text size="xs" c="dimmed">Global customer</Text>
         <Text fw={500}>No</Text>
       </Box>
+      <Box>
+        <Text size="xs" c="dimmed" style={{
+          backgroundColor: '#fff3cd', 
+          padding: '2px 6px', 
+          borderRadius: '3px', 
+          border: '1px solid #ffeaa7',
+          fontWeight: 600,
+          color: '#856404',
+          display: 'inline-block'
+        }}>Market subsegment</Text>
+        <Text fw={500}>Federal</Text>
+      </Box>
+      <Box>
+        <Text size="xs" c="dimmed" style={{
+          backgroundColor: '#fff3cd', 
+          padding: '2px 6px', 
+          borderRadius: '3px', 
+          border: '1px solid #ffeaa7',
+          fontWeight: 600,
+          color: '#856404',
+          display: 'inline-block'
+        }}>Convert to LGA</Text>
+        <Text fw={500}>Yes</Text>
+      </Box>
     </SimpleGrid>
      <Paper withBorder p="md" radius="sm" mt="lg" style={{backgroundColor: '#F8F9FA'}}>
       <SimpleGrid cols={3}>
@@ -66,7 +90,7 @@ const CustomerInfo = () => (
         </Box>
         <Box>
             <Text size="xs" fw={700}>Phone number</Text>
-            <Text>2132423435</Text>
+            <Text>2132423456</Text>
         </Box>
       </SimpleGrid>
      </Paper>

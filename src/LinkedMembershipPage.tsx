@@ -15,6 +15,8 @@ import {
   Pagination,
   Notification,
   Select,
+  Tooltip,
+  ActionIcon,
 } from '@mantine/core';
 import { IconInfoCircle, IconCheck, IconX } from '@tabler/icons-react';
 
@@ -217,7 +219,41 @@ const LinkedMembershipPage = () => {
   return (
     <Box>
       <Group justify="space-between" align="center" mb="md">
-        <Title order={4}>Linked Membership</Title>
+        <Group gap="xs">
+          <Title order={4} style={{
+            backgroundColor: '#fff3cd', 
+            padding: '4px 8px', 
+            borderRadius: '3px', 
+            border: '1px solid #ffeaa7',
+            color: '#856404',
+            display: 'inline-block'
+          }}>Linked Membership</Title>
+          <Tooltip 
+            label={
+              <div style={{ maxWidth: '300px' }}>
+                <Text size="xs" fw={600} mb="xs">Join Existing tab visible when ALL conditions are met:</Text>
+                <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '11px', lineHeight: '1.4' }}>
+                  <li>Market Segment is Government</li>
+                  <li>Market Subsegment has a selection (Federal or State)</li>
+                  <li>Country is US or Canada under Company Profile</li>
+                </ul>
+                <Text size="xs" c="dimmed" mt="xs">
+                  Current status: ✅ All conditions met
+                </Text>
+              </div>
+            }
+            multiline
+            position="top"
+            withArrow
+            styles={{
+              tooltip: { backgroundColor: '#333', color: 'white', fontSize: '11px' }
+            }}
+          >
+            <ActionIcon variant="subtle" size="sm" color="gray">
+              <IconInfoCircle size={14} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
         <Anchor href="#" size="sm">Find out more</Anchor>
       </Group>
 
