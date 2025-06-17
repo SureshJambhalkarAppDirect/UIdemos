@@ -417,6 +417,12 @@ const CompanyProfile = ({ companyData, onAddAdditionalInfo, scenario }: {
               variant="outline" 
               onClick={onAddAdditionalInfo}
               leftSection={<IconPlus size={16} />}
+              style={{
+                backgroundColor: '#fff3cd',
+                borderColor: '#ffeaa7',
+                color: '#856404',
+                fontWeight: 500
+              }}
             >
               Add Additional Information
             </Button>
