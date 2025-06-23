@@ -74,7 +74,7 @@ const CustomerInfo = () => (
           fontWeight: 600,
           color: '#856404',
           display: 'inline-block'
-        }}>Convert to LGA</Text>
+        }}>Convert to LGA from the next term?</Text>
         <Text fw={500}>Yes</Text>
       </Box>
     </SimpleGrid>

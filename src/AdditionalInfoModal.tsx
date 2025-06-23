@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Stack, TextInput, Select, Group, Button, Text, Tooltip, ActionIcon, Radio } from '@mantine/core';
+import { Modal, Stack, TextInput, Select, Group, Button, Text, Tooltip, ActionIcon, Radio, Anchor } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
 
 interface MockData {
@@ -211,6 +211,9 @@ const AdditionalInfoModal = ({ opened, onClose, mockData, scenario, onSave }: Ad
                 }
               }}
             />
+            <Text size="xs" c="#6b7280" mt="xs">
+              Selecting a market subsegment will automatically enroll you in the Large Government Agency (LGA) program. <Anchor href="#" size="xs" c="#0891b2">Learn more about LGA benefits ↗</Anchor>
+            </Text>
           </div>
         )}
         
@@ -292,7 +295,28 @@ const AdditionalInfoModal = ({ opened, onClose, mockData, scenario, onSave }: Ad
           <Button variant="outline" onClick={onClose} size="sm">
             Cancel
           </Button>
-          <Button onClick={() => onSave?.(currentMockData)} size="sm">Save Details</Button>
+          <Button 
+            onClick={() => onSave?.({
+              ...currentMockData,
+              address,
+              city,
+              country,
+              state,
+              zipCode,
+              marketSegment,
+              marketSubSegment,
+              convertToLGA,
+              preferredLanguage,
+              reseller,
+              firstName: 'adsasd',
+              lastName: 'asdasd',
+              email: 'asdasd@as.com',
+              phoneNumber: '2132423456'
+            })} 
+            size="sm"
+          >
+            {scenario === 'Edit' ? 'Update Details' : 'Save Details'}
+          </Button>
         </Group>
       </Stack>
     </Modal>

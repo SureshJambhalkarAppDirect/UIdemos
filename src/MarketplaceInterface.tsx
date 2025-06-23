@@ -201,11 +201,11 @@ const MarketplaceInterface: React.FC<MarketplaceInterfaceProps> = ({ mockDataSce
           {/* Tabs for Scenarios */}
           <Tabs value={activeTab} onChange={setActiveTab} mb="lg">
             <Tabs.List>
-              <Tabs.Tab value="applicable" color="green">
-                Convert to LGA Applicable
-              </Tabs.Tab>
               <Tabs.Tab value="not-applicable" color="red">
                 Convert to LGA Not Applicable
+              </Tabs.Tab>
+              <Tabs.Tab value="applicable" color="green">
+                Convert to LGA Applicable
               </Tabs.Tab>
             </Tabs.List>
 

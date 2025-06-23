@@ -1,0 +1,588 @@
+# AppDirect Platform Design System
+
+## Overview
+This file documents the UI components, design tokens, and patterns extracted from the live AppDirect platform for creating accurate mockups and maintaining design consistency.
+
+## Design Tokens
+
+### Colors
+```
+Primary Teal: #0891b2 (buttons, active states, highlights)
+Dark Header: #3c3c3c (top navigation background)
+Light Gray 1: #f8f8f8 (secondary navigation background)
+Light Gray 2: #f5f5f5 (sidebar background)
+Success Green: #22c55e (status indicators, success states)
+Text Primary: #374151 (main text color)
+Text Secondary: #6b7280 (secondary text)
+White: #ffffff (backgrounds, button text)
+Border Light: #e5e7eb (table borders, dividers)
+```
+
+### Typography
+```
+Font Family: Sans-serif (likely Inter, Roboto, or system font)
+Font Weights: 
+  - Regular (400)
+  - Medium (500) 
+  - Semibold (600)
+  - Bold (700)
+
+Font Sizes:
+  - Page Title: 24px/1.5 (semibold)
+  - Section Headers: 16px/1.4 (medium)
+  - Body Text: 14px/1.4 (regular)
+  - Small Text: 12px/1.3 (regular)
+```
+
+### Spacing
+```
+Base Unit: 8px
+Common Spacing:
+  - xs: 4px
+  - sm: 8px
+  - md: 16px
+  - lg: 24px
+  - xl: 32px
+  - 2xl: 48px
+```
+
+## Component Library
+
+### Navigation Components
+
+#### Top Header Bar
+```
+Background: Dark (#3c3c3c)
+Height: ~60px
+Elements:
+  - Logo (left)
+  - Icon navigation (grid, charts, utilities)
+  - Search bar (center) - white input with dropdown
+  - User controls (right) - Manage dropdown, user menu, cart icon
+Text Color: White
+```
+
+#### Secondary Navigation (Tabs)
+```
+Background: Light gray (#f8f8f8)
+Height: ~48px
+Tab States:
+  - Default: Gray text
+  - Active: Darker text with bottom border/highlight
+  - Hover: Subtle gray background
+Tabs: Marketplace, Dashboard, Products, Settings, Reports, Theme Manager
+```
+
+#### Sidebar Navigation
+```
+Background: Light gray (#f5f5f5)
+Width: ~280px
+Sections:
+  - HOME (Overview, Users, Companies, etc.)
+  - BILLING (Orders, Invoices, Payments, etc.)
+  - EVENTS (Event Logs, App Usage Logs, etc.)
+Active State: Teal background (#0891b2) with white text
+Text: Dark gray hierarchy
+```
+
+### Data Display Components
+
+#### Data Table
+```
+Background: White with alternating row stripes
+Headers:
+  - Bold text
+  - Sortable indicators (arrows)
+  - Background: Slightly darker gray
+Rows:
+  - Height: ~48px
+  - Padding: 12px 16px
+  - Hover: Light gray background
+  - Striping: Every other row #f9fafb
+Status Indicators: Green dots (#22c55e) for active items
+```
+
+#### Pagination
+```
+Style: Minimal, clean design
+Elements: Previous/next arrows, page numbers, ellipsis
+Active State: Page number with teal background
+Spacing: Centered, generous padding
+```
+
+### Button Components
+
+#### Primary Button (Teal)
+```
+Background: #0891b2
+Text: White, medium weight
+Padding: 8px 16px (small), 12px 24px (medium)
+Border Radius: 4px
+Hover: Darker teal
+States: Default, hover, active, disabled
+```
+
+#### Secondary Button (Outline)
+```
+Background: White
+Border: 1px solid #d1d5db
+Text: Dark gray
+Padding: 8px 16px (small), 12px 24px (medium)
+Border Radius: 4px
+Hover: Light gray background
+```
+
+### Form Components
+
+#### Search Input
+```
+Background: White
+Border: 1px solid #d1d5db
+Padding: 8px 12px
+Border Radius: 4px
+Placeholder: Gray text
+Icon: Magnifying glass (right-aligned)
+Focus: Teal border
+```
+
+#### Filter Controls
+```
+Style: Outline buttons
+Background: White
+Border: 1px solid #d1d5db
+Text: Dark gray
+Spacing: 8px between buttons
+```
+
+### Layout Patterns
+
+#### Main Layout Structure
+```
+Header: Fixed top navigation (dark)
+Sub-navigation: Secondary tabs (light)
+Sidebar: Fixed left panel (280px)
+Main Content: Right panel with padding
+Content Padding: 24px
+```
+
+#### Page Header Pattern
+```
+Title: Large, bold text (left-aligned)
+Actions: Button group (right-aligned)
+Spacing: 24px margin bottom
+Background: White
+```
+
+## Component States
+
+### Interactive States
+```
+Hover: Light gray background for rows/buttons
+Active: Teal background for navigation items
+Selected: Check states for table rows
+Disabled: Reduced opacity, gray text
+Loading: Spinner states for actions
+```
+
+### Status Indicators
+```
+Success: Green dot (#22c55e)
+Warning: Yellow/amber dot
+Error: Red dot
+Info: Blue dot
+Neutral: Gray dot
+```
+
+## Natural Language Component References
+
+Use these terms when referencing components:
+- "main header" = dark top navigation
+- "tab navigation" = secondary light navigation
+- "sidebar menu" = left navigation panel
+- "companies table" = main data table
+- "primary blue button" = teal action buttons
+- "secondary button" = outline style buttons
+- "status dots" = circular status indicators
+- "pagination bar" = bottom page navigation
+- "search box" = input with magnifying glass
+- "filter controls" = Show Filters/Download Report buttons
+- "breadcrumbs" = navigation breadcrumb trail
+- "company header card" = company info display card
+- "stats cards" = metrics/statistics card row
+- "info card" = detailed information display
+- "secondary tabs" = horizontal tab navigation
+- "user table" = user data table with roles
+- "show more link" = expandable content trigger
+- "copy button" = ID/text copy functionality
+- "tab overflow dropdown" = additional tabs dropdown menu
+- "more tabs button" = "+X more Tabs" trigger button
+- "vendor dropdown" = vendor selection dropdown menu
+- "empty state" = no content placeholder with icon and message
+- "selected vendor" = checkmark indicator for active vendor
+- "adobe empty state" = Adobe-specific no profile linked state
+- "add info button" = "Add Additional Information" action button
+- "button hover state" = darker styling on hover interaction
+- "modal dialog" = overlay popup with form content
+- "form fields" = various input types with labels and validation
+- "required fields" = red asterisk indicators for mandatory inputs
+- "form validation" = error messages and states
+- "dropdown fields" = select inputs with placeholder text
+- "radio buttons" = yes/no selection controls
+- "modal close button" = X icon to dismiss dialog
+- "success notification" = green toast message with checkmark
+- "vendor profile card" = populated company info with logo
+- "admin data table" = administrator contact information table
+- "success feedback" = confirmation messaging after form submission
+- "edit form state" = form pre-populated with existing data for updating
+- "update success message" = confirmation for profile edit completion
+- "linked membership form" = membership application form with name and type fields
+- "membership dropdown" = standard/consortium selection options
+- "membership success state" = populated membership details after approval
+- "linked membership data" = two-column layout showing membership information
+- "vip programs section" = Value Incentive Plan program offerings
+- "program cards" = two-column layout with action buttons
+- "vip detail tabs" = horizontal tabs within program sections
+- "button processing state" = loading spinner on active buttons
+- "program form details" = detailed commitment and quantity forms
+- "linked membership" = membership application section
+- "page footer" = AppDirect branding and navigation links
+- "profile overflow menu" = three dots menu with management actions
+- "refresh action" = data refresh option in overflow menu
+- "update profile action" = profile editing option in overflow menu
+
+## Usage Guidelines
+
+When creating mockups or components:
+1. Use the exact color values specified above
+2. Maintain consistent spacing using the 8px grid
+3. Follow the typography hierarchy
+4. Implement proper interactive states
+5. Use established component patterns
+6. Reference components by their natural language names
+
+### Breadcrumb Navigation
+```
+Background: White
+Style: Text links with ">" separators
+Typography: Regular weight, teal links
+Spacing: Consistent with content padding
+```
+
+### Company Header Card
+```
+Background: White card with subtle border
+Layout: Logo + title + status (left), actions (right)
+Company Logo: Square icon container (#0891b2 background)
+Status Badge: "Enabled" with green dot indicator
+Actions: Secondary + Primary button group
+```
+
+### Statistics Cards Row
+```
+Background: Light gray background strip
+Card Style: White cards with subtle shadows
+Layout: 6-column grid layout
+Content: Large number + descriptive label
+Typography: Bold numbers, regular labels
+Spacing: Even spacing between cards
+```
+
+### Information Display Card
+```
+Background: White with light blue accent strip
+Layout: Two-column layout (labels + values)
+Actions: "Edit" link (teal), "Show more" expandable
+Copy Function: Copy icon for ID field
+Typography: Label + value pairs, monospace for IDs
+```
+
+### Secondary Tab Navigation
+```
+Background: White
+Style: Horizontal tabs with active state
+Active Tab: "Users" with underline/highlight
+Tab Count: "+3 more Tabs" overflow indicator
+Typography: Medium weight tab labels
+```
+
+### Tab Overflow Dropdown
+```
+Trigger: "+X more Tabs" button (gray background)
+Background: White dropdown with shadow
+Border: Subtle border/shadow
+Items: Clean list layout with hover states
+Content: Additional tab names (Payment Methods, Vendor Information, Domains)
+Typography: Regular weight, same as main tabs
+Spacing: Consistent padding, clean list structure
+```
+
+### User Data Tables
+```
+Headers: Status, Name, Email, Apps columns
+User Rows: Status indicator + name/role hierarchy
+Role Display: Primary role + secondary role stacked
+Empty States: Placeholder rows for "Synced Users"
+Typography: Hierarchical text sizing
+```
+
+### Vendor Selection Dropdown
+```
+Background: Light gray dropdown container
+Options: List with checkmarks for selected items
+Selected State: Checkmark (✓) indicator for active vendor
+Typography: Regular weight, dark text
+Layout: "Select" placeholder + vendor options (Microsoft, Adobe, etc.)
+```
+
+### Empty State Display
+```
+Background: White content area
+Layout: Centered content with icon and message
+Typography: Bold headline + descriptive text
+Message Style: "No [Vendor] tenant linked" format
+Icon: Subtle gray illustration/icon
+Spacing: Generous vertical spacing around message
+```
+
+### Adobe-Specific Components
+```
+Adobe Logo: Red Adobe "A" icon in empty state
+Empty State Message: "There is no Adobe company profile linked to this account."
+Action Button: "Add Additional Information" (secondary button style)
+Button Hover State: Darker background/border on hover
+Layout: Vendor dropdown shows "Adobe" as selected
+```
+
+### Modal Dialog Components
+```
+Modal Overlay: Dark semi-transparent background
+Modal Container: White dialog box, centered
+Modal Header: "Additional Information" title with close (X) button
+Modal Body: Scrollable content area with form fields
+Modal Footer: Action buttons (Save Details + Cancel)
+Close Button: Gray X icon, top-right corner
+```
+
+### Form Field Components
+```
+Text Inputs: Standard white background, gray border
+Required Fields: Red asterisk (*) indicators
+Field Labels: Dark text, medium weight
+Dropdown Selects: White background with dropdown arrow
+Radio Buttons: Blue selection indicators
+Field Validation: Red error text below invalid fields
+Error Example: "Error: Zip code is a required field."
+Placeholder Text: "Select country", "Select state", etc.
+```
+
+### Form Field Types
+```
+Personal Info: First name, Last name, Email, Phone number
+Address Fields: Address, City, Country (dropdown), State (dropdown), Zip code
+Business Fields: Market segment (dropdown), Preferred language (dropdown)
+Vendor Fields: Reseller (dropdown with vendor-specific options)
+Global Customer: Yes/No radio button selection
+```
+
+### Form States
+```
+Empty State: All fields blank with placeholders
+Filled State: Fields populated with user data
+Validation State: Red error messages for required/invalid fields
+Submit Actions: "Save Details" (primary) + "Cancel" (secondary)
+Edit State: Form pre-populated with existing profile data
+Update Actions: "Update Details" (primary) + "Cancel" (secondary)
+```
+
+### Success State Components
+```
+Success Notification: Green toast notification (bottom-right)
+Success Message: "Customer account created successfully."
+Success Icon: Green checkmark in notification
+Auto-dismiss: Notification with close (X) button
+Update Success: "Customer account updated successfully." (for profile edits)
+Context-Aware Messaging: Different messages for create vs update actions
+```
+
+### Populated Vendor Information Display
+```
+Vendor Profile Card: White card with Adobe logo + company details
+Company Header: Adobe logo + "Cypress Dietrich - Labadie" + ID
+Contact Information: Address, phone, email in organized layout
+Discount Levels: Two-column layout (licenses vs consumables)
+Data Values: Level 01, Tier T1, Commercial, etc.
+```
+
+### Company Profile Overflow Menu
+```
+Trigger: Three dots (•••) icon on vendor profile card
+Background: White dropdown with shadow/border
+Menu Items: Clean list layout with action options
+Actions Available: "Refresh" and "Update company profile"
+Typography: Regular weight, consistent with interface
+Position: Right-aligned dropdown from trigger button
+```
+
+### Administrator Data Table
+```
+Table Headers: Administrator name, Email ID, Phone number
+Table Layout: Clean rows with contact information
+Data Display: User details from submitted form
+Typography: Consistent with other data tables
+```
+
+### Updated Statistics
+```
+Stats Update: Purchased Products increased from 2 to 3
+Real-time Updates: Stats reflect form submission results
+```
+
+### Value Incentive Programs (VIP) Section
+```
+Section Title: "Value Incentive Plan (VIP) Programs"
+Program Cards: Two-column layout with program options
+Card Content: Program name + "Find out more" link + action button
+3YC Program: "3-Year Commit (3YC)" with "Apply for 3YC" button
+HGO Program: "High Growth Offers (HGO)" with "Check Eligible Offers" button
+Additional Info: "3YC is required before making a purchase" text
+```
+
+### VIP Program Detail Tabs
+```
+Tab Layout: Horizontal tabs within VIP section
+Active Tab: "3-Year Commit (3YC)" with teal underline
+Inactive Tab: "High Growth Offers" (gray text)
+Content Area: Detailed form fields for selected program
+Tab Content: Commitment details, quantities, status information
+```
+
+### Button Processing States
+```
+Processing Button: "Update 3YC" with loading spinner
+Button Text: Maintains original text during processing
+Loading Indicator: Spinner icon within button
+Disabled State: Button appears disabled during processing
+```
+
+### 3YC Program Form Details
+```
+Commitment Info: Period dates, membership status, commitment type
+Quantity Fields: Licenses (251) and Consumables (0) input fields
+Minimum Requirements: "A minimum of 10 licenses required" guidance text
+Two-Column Layout: Licenses vs Consumables side-by-side
+Form Actions: "Update 3YC" (primary, processing) + "Cancel" (secondary)
+```
+
+### Linked Membership Section
+```
+Section Title: "Linked Membership"
+Layout: Centered content with "Find out more" link
+Action Button: "Apply for Linked Membership" (secondary style)
+Background: Light gray card container
+```
+
+### Linked Membership Application Form
+```
+Info Message: Blue info banner about VIP program participation
+Form Fields: Membership name (text input) + membership type (dropdown)
+Field Labels: "Linked Membership name" and "Linked Membership type"
+Dropdown Options: "Standard" and "Consortium" membership types
+Help Text: Descriptive guidance about organization membership
+Form Actions: "Apply Linked Membership" (primary) + "Cancel" (secondary)
+```
+
+### Linked Membership Success State
+```
+Populated Information: Two-column layout with membership details
+Data Fields: Name, Type, Creation date, Owner status
+Example Data: "Federal Government Purchasing Group", "Standard", "06/17/25", "Yes"
+Success Message: "Your Linked Membership request has been submitted successfully."
+Layout: Replaces application form with confirmed membership details
+```
+
+### Page Footer
+```
+Branding: "Powered by AppDirect" with logo
+Footer Links: Contact, Help Center, Privacy Policy, Terms & Conditions
+Copyright: "© 2025 AppDistribution"
+Language Selector: "English (United States)" dropdown
+Background: Light gray
+Typography: Small text, organized layout
+```
+
+## Analysis Source
+Extracted from: AppDirect Companies page and Company Detail page
+URLs: 
+- appdistribution.byappdirect.com/channel/company/[id]?selectedTab=TenantsTab
+- Company detail view (Appdirect company)
+Date: Current analysis session 
+
+---
+
+## APPLICATION ARCHITECTURE & NAPKIN CREATION GUIDELINES
+
+### Current Architecture Overview
+This application uses a clean, decoupled architecture with React Router for URL management:
+
+```
+/ → Landing Page (AppConnectors UI Napkins)
+/lga-flow/* → AC-14371: Large Government Agencies (fully isolated)
+/company-flow/* → Company Flow: Adobe Vendor Setup (fully isolated)
+```
+
+Each flow is completely independent with:
+- ✅ Own routing and URL management
+- ✅ Own navigation and state management  
+- ✅ Zero dependencies on other flows
+- ✅ Isolated functionality that can evolve independently
+
+### Adding New Napkins/Flows
+
+**When user wants to add a new napkin, they should provide:**
+
+#### 1. Basic Details
+- **Display Name**: What appears on napkin card (e.g., "AC-12345: New Feature Flow")
+- **Route Path**: Desired URL path (e.g., `/new-feature-flow`)
+- **Color**: Hex color for napkin theme (e.g., `#22c55e`, `#f59e0b`, `#8b5cf6`)
+
+#### 2. Flow Type (Choose one)
+- **Option A**: "Create new flow from scratch"
+- **Option B**: "Use existing component: [ComponentName]"  
+- **Option C**: "Copy structure from: [existing flow like LGA or Company]"
+
+#### 3. Content/Functionality (if new)
+- Brief description of what the flow should do
+- Any specific pages/views needed
+- Any special navigation requirements
+
+#### Example Request Format:
+```
+"Add a new napkin:
+- Name: 'AC-15892: Partner Management'  
+- Route: `/partner-flow`
+- Color: `#8b5cf6` (purple)
+- Type: Create new flow from scratch
+- Content: Should have a partners list page and partner detail page"
+```
+
+### Implementation Process
+When adding a new napkin, automatically:
+1. ✅ Add napkin card to `LandingPage.tsx`
+2. ✅ Create route in `App.tsx`  
+3. ✅ Create flow container component (`[Name]Flow.tsx`)
+4. ✅ Set up internal navigation structure
+5. ✅ Ensure complete isolation from existing flows
+6. ✅ Follow established URL patterns and routing architecture
+
+### Architecture Benefits
+- **Zero Impact**: New flows don't affect existing flows
+- **Consistent Patterns**: All flows follow same architectural structure  
+- **URL Management**: Proper routing with bookmarkable URLs
+- **Scalability**: Easy to add/modify/remove flows independently
+- **Browser Support**: Back/forward navigation works correctly
+
+### Critical Preservation Rules
+- **AC-14371 (LGA Flow)**: Must never be disrupted - contains major functionality
+- **Company Flow**: Must remain completely separate from AC-14371
+- **Flow Isolation**: Each flow must be completely self-contained
+- **URL Structure**: Maintain clean, predictable URL patterns
