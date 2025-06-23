@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Box,
   Title,
-  SegmentedControl,
+  Tabs,
   TextInput,
   Button,
   Text,
@@ -24,6 +24,7 @@ import { IconInfoCircle, IconCheck, IconX } from '@tabler/icons-react';
 const mockSearchResults = [
   {
     id: '1',
+    lmId: '10923232',
     name: 'Federal Government Purchasing Group',
     type: 'Standard',
     creationDate: '06/16/25',
@@ -31,6 +32,7 @@ const mockSearchResults = [
   },
   {
     id: '2',
+    lmId: '10923456',
     name: 'State of California Consolidated Agencies',
     type: 'Consortium',
     creationDate: '06/23/25',
@@ -38,6 +40,7 @@ const mockSearchResults = [
   },
   {
     id: '3',
+    lmId: '10924578',
     name: 'Healthcare Partners Network',
     type: 'Standard',
     creationDate: '06/08/25',
@@ -45,6 +48,7 @@ const mockSearchResults = [
   },
   {
     id: '4',
+    lmId: '10925689',
     name: 'Non-Profit Organizations Alliance',
     type: 'Consortium',
     creationDate: '06/12/25',
@@ -52,6 +56,7 @@ const mockSearchResults = [
   },
   {
     id: '5',
+    lmId: '10926790',
     name: 'Municipal Government Group',
     type: 'Standard',
     creationDate: '06/29/25',
@@ -59,6 +64,7 @@ const mockSearchResults = [
   },
   {
     id: '6',
+    lmId: '10927801',
     name: 'Educational Institutions Consortium',
     type: 'Consortium',
     creationDate: '06/05/25',
@@ -66,6 +72,7 @@ const mockSearchResults = [
   },
   {
     id: '7',
+    lmId: '10928912',
     name: 'Technology Services Alliance',
     type: 'Standard',
     creationDate: '06/18/25',
@@ -73,6 +80,7 @@ const mockSearchResults = [
   },
   {
     id: '8',
+    lmId: '10929023',
     name: 'Regional Transportation Consortium',
     type: 'Consortium',
     creationDate: '06/14/25',
@@ -170,7 +178,6 @@ const LinkedMembershipPage = () => {
       <Box>
         <Group justify="space-between" align="center" mb="md">
           <Title order={4}>Linked Membership</Title>
-          <Anchor href="#" size="sm">Find out more</Anchor>
         </Group>
 
         {showSuccessBanner && (
@@ -194,6 +201,10 @@ const LinkedMembershipPage = () => {
 
         <Paper withBorder p="lg" radius="md">
           <SimpleGrid cols={2} spacing="lg">
+            <Box>
+              <Text size="sm" c="dimmed" mb={4}>Linked Membership ID</Text>
+              <Text fw={500}>{enrolledLM.lmId}</Text>
+            </Box>
             <Box>
               <Text size="sm" c="dimmed" mb={4}>Linked Membership name</Text>
               <Text fw={500}>{enrolledLM.name}</Text>
@@ -257,186 +268,182 @@ const LinkedMembershipPage = () => {
         <Anchor href="#" size="sm">Find out more</Anchor>
       </Group>
 
-      <SegmentedControl
-        value={mode}
-        onChange={setMode}
-        data={[
-          { label: 'Join Existing', value: 'join' },
-          { label: 'Create New', value: 'create' },
-        ]}
-        fullWidth
-        mb="lg"
-      />
+      <Tabs value={mode} onChange={(value) => setMode(value || 'join')} mb="lg" color="#0891b2">
+        <Tabs.List>
+          <Tabs.Tab value="join">Join Existing</Tabs.Tab>
+          <Tabs.Tab value="create">Create New</Tabs.Tab>
+        </Tabs.List>
 
-      {mode === 'join' && (
-        <Stack gap="md">
-          <Group gap="md">
-            <TextInput
-              placeholder="Enter a name to search (minimum 3 characters)"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={handleKeyPress}
-              style={{ flex: 1 }}
-              error={searchError}
-            />
-            <Button 
-              onClick={handleSearch}
-              disabled={!searchTerm.trim()}
-            >
-              Search
-            </Button>
-          </Group>
-
-          {searchError && (
-            <Alert color="red" variant="light" mt="md">
-              {searchError}
-            </Alert>
-          )}
-
-          {hasSearched && (
-            <Box mt="md">
-              {searchResults.length > 0 ? (
-                <Stack gap="md">
-                  <Text size="sm" c="dimmed">
-                    {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
-                  </Text>
-                  <SimpleGrid cols={1} spacing="md">
-                    {currentResults.map((lm) => (
-                      <Paper key={lm.id} withBorder p="md" radius="md">
-                        <Group justify="space-between" align="flex-start" mb="xs">
-                          <Text fw={600} size="md">{lm.name}</Text>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleEnroll(lm)}
-                          >
-                            Enroll
-                          </Button>
-                        </Group>
-                        <Text size="sm" c="dimmed">
-                          LM type: {lm.type} | Creation Date: {lm.creationDate}
-                        </Text>
-                      </Paper>
-                    ))}
-                  </SimpleGrid>
-                  {totalPages > 1 && (
-                    <Group justify="center" mt="md">
-                      <Pagination
-                        value={currentPage}
-                        onChange={handlePageChange}
-                        total={totalPages}
-                        size="sm"
-                      />
-                    </Group>
-                  )}
-                </Stack>
-              ) : (
-                <Text c="dimmed" ta="center" py="xl">
-                  No Linked Memberships found for "{searchTerm}" in {companyCountry}
-                </Text>
-              )}
-            </Box>
-          )}
-        </Stack>
-      )}
-
-      {mode === 'create' && (
-        <Paper withBorder p="lg" radius="md">
-          <Stack gap="lg">
-            <Alert 
-              icon={<IconInfoCircle size="1rem" />} 
-              color="blue" 
-              variant="light"
-              styles={{
-                root: {
-                  backgroundColor: '#E3F2FD',
-                  border: '1px solid #BBDEFB'
-                }
-              }}
-            >
-              <Text size="sm">
-                Adobe customer can participate in only one VIP program at a time. Switch to{' '}
-                <Anchor href="#" size="sm" style={{ color: '#1976D2' }}>
-                  3-Year Commit
-                </Anchor>
-                .
-              </Text>
-            </Alert>
-
-            <Box>
-              <Text size="sm" fw={500} mb="xs">
-                <Text component="span" c="red">*</Text> Linked Membership name
-              </Text>
+        <Tabs.Panel value="join" pt="md">
+          <Stack gap="md">
+            <Group gap="md">
               <TextInput
-                value={newLMName}
-                onChange={(e) => setNewLMName(e.target.value)}
-                placeholder="Enter membership name"
-                size="sm"
-                styles={{
-                  input: {
-                    backgroundColor: '#F5F5F5',
-                    border: '1px solid #E0E0E0'
-                  }
-                }}
+                placeholder="Enter a name to search (minimum 3 characters)"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyPress={handleKeyPress}
+                style={{ flex: 1 }}
+                error={searchError}
               />
-              <Text size="xs" c="dimmed" mt="xs">
-                Identifies your organization's membership in Adobe's Value Incentive Plan (VIP). This name is typically the name of your organization.
-              </Text>
-            </Box>
-
-            <Box>
-              <Text size="sm" fw={500} mb="xs">
-                <Text component="span" c="red">*</Text> Linked Membership type
-              </Text>
-              <Select
-                value={newLMType}
-                onChange={(value) => setNewLMType(value || 'Standard')}
-                data={[
-                  { value: 'Standard', label: 'Standard' },
-                  { value: 'Consortium', label: 'Consortium' }
-                ]}
-                placeholder="Select membership type"
-                size="sm"
-                styles={{
-                  input: {
-                    backgroundColor: '#F5F5F5',
-                    border: '1px solid #E0E0E0'
-                  }
-                }}
-              />
-              <Text size="xs" c="dimmed" mt="xs">
-                Select the type of membership
-              </Text>
-            </Box>
-
-            <Group gap="md" mt="lg">
               <Button 
-                onClick={handleCreateNew}
-                disabled={!newLMName.trim()}
-                style={{
-                  backgroundColor: '#4FC3F7',
-                  border: 'none'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#29B6F6';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#4FC3F7';
-                }}
+                onClick={handleSearch}
+                disabled={!searchTerm.trim()}
               >
-                Apply Linked Membership
-              </Button>
-              <Button 
-                variant="subtle"
-                color="gray"
-                onClick={handleCancel}
-              >
-                Cancel
+                Search
               </Button>
             </Group>
+
+            {searchError && (
+              <Alert color="red" variant="light" mt="md">
+                {searchError}
+              </Alert>
+            )}
+
+            {hasSearched && (
+              <Box mt="md">
+                {searchResults.length > 0 ? (
+                  <Stack gap="md">
+                    <Text size="sm" c="dimmed">
+                      {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
+                    </Text>
+                    <SimpleGrid cols={1} spacing="md">
+                      {currentResults.map((lm) => (
+                        <Paper key={lm.id} withBorder p="md" radius="md">
+                          <Group justify="space-between" align="flex-start" mb="xs">
+                            <Text fw={600} size="md">{lm.name}</Text>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleEnroll(lm)}
+                            >
+                              Enroll
+                            </Button>
+                          </Group>
+                          <Text size="sm" c="dimmed">
+                            ID: {lm.lmId} | Type: {lm.type} | Creation Date: {lm.creationDate}
+                          </Text>
+                        </Paper>
+                      ))}
+                    </SimpleGrid>
+                    {totalPages > 1 && (
+                      <Group justify="center" mt="md">
+                        <Pagination
+                          value={currentPage}
+                          onChange={handlePageChange}
+                          total={totalPages}
+                          size="sm"
+                        />
+                      </Group>
+                    )}
+                  </Stack>
+                ) : (
+                  <Text c="dimmed" ta="center" py="xl">
+                    No Linked Memberships found for "{searchTerm}" in {companyCountry}
+                  </Text>
+                )}
+              </Box>
+            )}
           </Stack>
-        </Paper>
-      )}
+        </Tabs.Panel>
+
+        <Tabs.Panel value="create" pt="md">
+          <Paper withBorder p="lg" radius="md">
+            <Stack gap="lg">
+              <Alert 
+                icon={<IconInfoCircle size="1rem" />} 
+                color="blue" 
+                variant="light"
+                styles={{
+                  root: {
+                    backgroundColor: '#E3F2FD',
+                    border: '1px solid #BBDEFB'
+                  }
+                }}
+              >
+                <Text size="sm">
+                  Adobe customer can participate in only one VIP program at a time. Switch to{' '}
+                  <Anchor href="#" size="sm" style={{ color: '#1976D2' }}>
+                    3-Year Commit
+                  </Anchor>
+                  .
+                </Text>
+              </Alert>
+
+              <Box>
+                <Text size="sm" fw={500} mb="xs">
+                  <Text component="span" c="red">*</Text> Linked Membership name
+                </Text>
+                <TextInput
+                  value={newLMName}
+                  onChange={(e) => setNewLMName(e.target.value)}
+                  placeholder="Enter membership name"
+                  size="sm"
+                  styles={{
+                    input: {
+                      backgroundColor: '#F5F5F5',
+                      border: '1px solid #E0E0E0'
+                    }
+                  }}
+                />
+                <Text size="xs" c="dimmed" mt="xs">
+                  Identifies your organization's membership in Adobe's Value Incentive Plan (VIP). This name is typically the name of your organization.
+                </Text>
+              </Box>
+
+              <Box>
+                <Text size="sm" fw={500} mb="xs">
+                  <Text component="span" c="red">*</Text> Linked Membership type
+                </Text>
+                <Select
+                  value={newLMType}
+                  onChange={(value) => setNewLMType(value || 'Standard')}
+                  data={[
+                    { value: 'Standard', label: 'Standard' },
+                    { value: 'Consortium', label: 'Consortium' }
+                  ]}
+                  placeholder="Select membership type"
+                  size="sm"
+                  styles={{
+                    input: {
+                      backgroundColor: '#F5F5F5',
+                      border: '1px solid #E0E0E0'
+                    }
+                  }}
+                />
+                <Text size="xs" c="dimmed" mt="xs">
+                  Select the type of membership
+                </Text>
+              </Box>
+
+              <Group gap="md" mt="lg">
+                <Button 
+                  onClick={handleCreateNew}
+                  disabled={!newLMName.trim()}
+                  style={{
+                    backgroundColor: '#4FC3F7',
+                    border: 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#29B6F6';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#4FC3F7';
+                  }}
+                >
+                  Apply Linked Membership
+                </Button>
+                <Button 
+                  variant="subtle"
+                  color="gray"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </Button>
+              </Group>
+            </Stack>
+          </Paper>
+        </Tabs.Panel>
+      </Tabs>
     </Box>
   );
 };
