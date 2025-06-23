@@ -38,7 +38,7 @@ interface MarketplaceInterfaceProps {
 }
 
 const MarketplaceInterface: React.FC<MarketplaceInterfaceProps> = ({ mockDataScenarios, onNavigate }) => {
-  const [activeTab, setActiveTab] = useState<string | null>('applicable');
+  const [activeTab, setActiveTab] = useState<string | null>('not-applicable');
   const [modalOpened, setModalOpened] = useState(false);
 
   const getCurrentScenario = () => {
