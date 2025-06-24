@@ -41,9 +41,9 @@ const LGAFlow = () => {
       hasLinkedMembership: true, // Part of active LM
       has3YCCommitment: true, // Committed to 3YC
       renewalQuantity: 50, // <=100
-      defaultMarketSegment: 'Commercial', // Not Government
+      defaultMarketSegment: 'Government', // Updated to Government per requirement
       defaultMarketSubSegment: '', // No sub-segment
-      defaultCountry: 'Mexico' // Not US/Canada
+      defaultCountry: 'United States' // Updated to United States per requirement
     }
   };
 
@@ -67,7 +67,21 @@ const LGAFlow = () => {
         navigate('/lga-flow/linked-membership');
         break;
       case 'customerDetails':
-        navigate('/lga-flow/customer-details');
+        // By default, preserve the current path segment to know which flow originated the navigation
+        const currentPath = location.pathname;
+        
+        // If we're coming from the Create flow, store this info
+        const isFromCreateFlow = currentPath.includes('create-and-convert');
+        
+        // Store this preference in localStorage for persistence
+        localStorage.setItem('lastFlowWasCreate', isFromCreateFlow ? 'true' : 'false');
+        
+        navigate('/lga-flow/customer-details', { 
+          state: { 
+            fromPath: currentPath,
+            isCreateFlow: isFromCreateFlow
+          }
+        });
         break;
       default:
         navigate('/lga-flow/create-and-convert');

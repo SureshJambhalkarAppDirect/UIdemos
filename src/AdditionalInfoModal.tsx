@@ -44,6 +44,7 @@ const AdditionalInfoModal = ({ opened, onClose, mockData, scenario, onSave }: Ad
   const [reseller, setReseller] = useState('Default (P1000030597)');
   const [marketSubSegment, setMarketSubSegment] = useState(currentMockData.defaultMarketSubSegment || 'Federal');
   const [convertToLGA, setConvertToLGA] = useState('');
+  const [isLGACustomer, setIsLGACustomer] = useState('');
 
   // Helper function to check if customer is in AD-30 window
   const isInAnniversaryWindow = () => {
@@ -66,6 +67,10 @@ const AdditionalInfoModal = ({ opened, onClose, mockData, scenario, onSave }: Ad
       currentMockData.renewalQuantity > 100 // Renewal quantity >100
     );
   };
+
+  // Check which flow we're in based on the scenario
+  const isCreateFlow = scenario?.includes('Hidden');
+  const isUpdateFlow = scenario?.includes('Visible');
 
   const lgaTooltipContent = (
     <div style={{ maxWidth: '300px' }}>
@@ -211,13 +216,69 @@ const AdditionalInfoModal = ({ opened, onClose, mockData, scenario, onSave }: Ad
                 }
               }}
             />
-            <Text size="xs" c="#6b7280" mt="xs">
-              Selecting a market subsegment will automatically enroll you in the Large Government Agency (LGA) program. <Anchor href="#" size="xs" c="#0891b2">Learn more about LGA benefits ↗</Anchor>
-            </Text>
           </div>
         )}
         
-        {shouldShowLGAConversion() && (
+        {marketSegment === 'Government' && (country === 'United States' || country === 'Canada') && isCreateFlow && (
+          <div>
+            <Group gap="xs" mb="xs">
+              <Text size="xs" fw={500} style={{
+                backgroundColor: '#fff3cd', 
+                padding: '2px 6px', 
+                borderRadius: '3px', 
+                border: '1px solid #ffeaa7',
+                fontWeight: 600,
+                color: '#856404'
+              }}>
+                LGA customer?
+              </Text>
+              <Tooltip 
+                label={
+                  <div style={{ maxWidth: '250px' }}>
+                    <Text size="xs" fw={600} mb="xs">Field visible when ALL conditions are met:</Text>
+                    <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '11px', lineHeight: '1.4' }}>
+                      <li>Market segment is Government</li>
+                      <li>Country is US or Canada</li>
+                      <li>Customer is a new customer</li>
+                    </ul>
+                    <Text size="xs" c="dimmed" mt="xs">
+                      Current status: {marketSegment === 'Government' && (country === 'United States' || country === 'Canada') && isCreateFlow ? '✅ All conditions met' : '❌ Conditions not met'}
+                    </Text>
+                  </div>
+                }
+                multiline
+                position="top"
+                withArrow
+                styles={{
+                  tooltip: { backgroundColor: '#333', color: 'white', fontSize: '11px' }
+                }}
+              >
+                <ActionIcon variant="subtle" size="sm" color="gray">
+                  <IconInfoCircle size={14} />
+                </ActionIcon>
+              </Tooltip>
+            </Group>
+            <Radio.Group
+              value={isLGACustomer}
+              onChange={setIsLGACustomer}
+              size="xs"
+              styles={{
+                root: {
+                  border: '2px solid #ffeaa7',
+                  borderRadius: '4px',
+                  padding: '8px'
+                }
+              }}
+            >
+              <Group gap="md">
+                <Radio value="yes" label="Yes" />
+                <Radio value="no" label="No" />
+              </Group>
+            </Radio.Group>
+          </div>
+        )}
+        
+        {shouldShowLGAConversion() && isUpdateFlow && (
           <div>
             <Group gap="xs" mb="xs">
               <Text size="xs" fw={500} style={{
@@ -306,6 +367,7 @@ const AdditionalInfoModal = ({ opened, onClose, mockData, scenario, onSave }: Ad
               marketSegment,
               marketSubSegment,
               convertToLGA,
+              isLGACustomer,
               preferredLanguage,
               reseller,
               firstName: 'adsasd',

@@ -83,8 +83,9 @@ const MarketplaceInterface: React.FC<MarketplaceInterfaceProps> = ({ mockDataSce
 
   const handleSaveDetails = (data: any) => {
     setModalOpened(false);
-    // Navigate to customer details view
+    // Navigate to customer details view with info about which flow we're coming from
     if (onNavigate) {
+      localStorage.setItem('lastFlowWasCreate', activeTab === 'not-applicable' ? 'true' : 'false');
       onNavigate('customerDetails');
     }
   };
@@ -201,11 +202,11 @@ const MarketplaceInterface: React.FC<MarketplaceInterfaceProps> = ({ mockDataSce
           {/* Tabs for Scenarios */}
           <Tabs value={activeTab} onChange={setActiveTab} mb="lg">
             <Tabs.List>
-              <Tabs.Tab value="not-applicable" color="red">
-                Convert to LGA Not Applicable
+              <Tabs.Tab value="not-applicable">
+                Create Company Profile Flow
               </Tabs.Tab>
-              <Tabs.Tab value="applicable" color="green">
-                Convert to LGA Applicable
+              <Tabs.Tab value="applicable">
+                Update Company Profile Flow
               </Tabs.Tab>
             </Tabs.List>
 
