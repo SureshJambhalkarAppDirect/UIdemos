@@ -17,6 +17,7 @@ import {
   Select,
   Tooltip,
   ActionIcon,
+  SegmentedControl,
 } from '@mantine/core';
 import { IconInfoCircle, IconCheck, IconX } from '@tabler/icons-react';
 
@@ -86,11 +87,34 @@ const mockSearchResults = [
     creationDate: '06/14/25',
     country: 'US',
   },
+  {
+    id: '9',
+    lmId: '10930134',
+    name: 'Canadian Government Services',
+    type: 'Standard',
+    creationDate: '06/20/25',
+    country: 'CA',
+  },
+  {
+    id: '10',
+    lmId: '10931245',
+    name: 'Canadian Education Alliance',
+    type: 'Consortium',
+    creationDate: '06/11/25',
+    country: 'CA',
+  },
 ];
+
+// Mock company profile data
+const mockCompanyProfile = {
+  name: 'Federal Agency XYZ',
+  country: 'US', // This would come from the actual company profile
+};
 
 const LinkedMembershipPage = () => {
   const [mode, setMode] = useState('join');
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchBy, setSearchBy] = useState('name'); // 'name' or 'country'
   const [newLMName, setNewLMName] = useState('Federal Government Purchasing Group');
   const [newLMType, setNewLMType] = useState('Standard');
   const [searchResults, setSearchResults] = useState<typeof mockSearchResults>([]);
@@ -102,36 +126,47 @@ const LinkedMembershipPage = () => {
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   
   // Get country from company profile (in real app, this would come from props or context)
-  const companyCountry = 'US'; // This would be extracted from the company profile
+  const companyCountry = mockCompanyProfile.country; // Using our mock data now
   const resultsPerPage = 5;
 
   const handleSearch = () => {
-    if (!searchTerm.trim()) return;
-    
-    // Validate minimum 3 characters
-    if (searchTerm.trim().length < 3) {
-      setSearchError('Please enter at least 3 characters to search');
-      setSearchResults([]);
-      setHasSearched(false);
-      return;
-    }
-    
     // Clear any previous errors
     setSearchError('');
     
-    // Simulate API call with country from profile
-    const filteredResults = mockSearchResults.filter(lm =>
-      lm.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      lm.country === companyCountry
-    );
+    if (searchBy === 'name') {
+      if (!searchTerm.trim()) return;
+      
+      // Validate minimum 3 characters for name search
+      if (searchTerm.trim().length < 3) {
+        setSearchError('Please enter at least 3 characters to search');
+        setSearchResults([]);
+        setHasSearched(false);
+        return;
+      }
+      
+      // Filter by name and country from profile
+      const filteredResults = mockSearchResults.filter(lm =>
+        lm.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        lm.country === companyCountry
+      );
+      
+      setSearchResults(filteredResults);
+      setHasSearched(true);
+    } else {
+      // Search by country (using the company's country)
+      const filteredResults = mockSearchResults.filter(lm =>
+        lm.country === companyCountry
+      );
+      
+      setSearchResults(filteredResults);
+      setHasSearched(true);
+    }
     
-    setSearchResults(filteredResults);
-    setHasSearched(true);
     setCurrentPage(1); // Reset to first page on new search
   };
 
   const handleKeyPress = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter') {
+    if (event.key === 'Enter' && searchBy === 'name') {
       handleSearch();
     }
   };
@@ -276,22 +311,55 @@ const LinkedMembershipPage = () => {
 
         <Tabs.Panel value="join" pt="md">
           <Stack gap="md">
-            <Group gap="md">
-              <TextInput
-                placeholder="Enter a name to search (minimum 3 characters)"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={handleKeyPress}
-                style={{ flex: 1 }}
-                error={searchError}
-              />
-              <Button 
-                onClick={handleSearch}
-                disabled={!searchTerm.trim()}
-              >
-                Search
-              </Button>
-            </Group>
+            <SegmentedControl
+              value={searchBy}
+              onChange={setSearchBy}
+              data={[
+                { label: 'Search by Name', value: 'name' },
+                { label: 'Search by Country', value: 'country' }
+              ]}
+              color="#0891b2"
+              mb="xs"
+            />
+            
+            {searchBy === 'name' ? (
+              <Group gap="md">
+                <TextInput
+                  placeholder="Enter a name to search (minimum 3 characters)"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  style={{ flex: 1 }}
+                  error={searchError}
+                />
+                <Button 
+                  onClick={handleSearch}
+                  disabled={!searchTerm.trim()}
+                >
+                  Search
+                </Button>
+              </Group>
+            ) : (
+              <Group gap="md">
+                <Select
+                  label="Country"
+                  value={companyCountry}
+                  data={[
+                    { value: 'US', label: 'United States' },
+                    { value: 'CA', label: 'Canada' },
+                  ]}
+                  disabled
+                  style={{ flex: 1 }}
+                  description="Using country from company profile"
+                />
+                <Button 
+                  onClick={handleSearch}
+                  style={{ marginTop: 'auto' }}
+                >
+                  Search
+                </Button>
+              </Group>
+            )}
 
             {searchError && (
               <Alert color="red" variant="light" mt="md">
@@ -304,7 +372,7 @@ const LinkedMembershipPage = () => {
                 {searchResults.length > 0 ? (
                   <Stack gap="md">
                     <Text size="sm" c="dimmed">
-                      {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
+                      {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found {searchBy === 'name' ? `for "${searchTerm}"` : ''} in {companyCountry === 'US' ? 'United States' : 'Canada'}
                     </Text>
                     <SimpleGrid cols={1} spacing="md">
                       {currentResults.map((lm) => (
@@ -320,7 +388,7 @@ const LinkedMembershipPage = () => {
                             </Button>
                           </Group>
                           <Text size="sm" c="dimmed">
-                            ID: {lm.lmId} | Type: {lm.type} | Creation Date: {lm.creationDate}
+                            ID: {lm.lmId} | Type: {lm.type} | Creation Date: {lm.creationDate} | Country: {lm.country === 'US' ? 'United States' : 'Canada'}
                           </Text>
                         </Paper>
                       ))}
@@ -338,7 +406,7 @@ const LinkedMembershipPage = () => {
                   </Stack>
                 ) : (
                   <Text c="dimmed" ta="center" py="xl">
-                    No Linked Memberships found for "{searchTerm}" in {companyCountry}
+                    No Linked Memberships found {searchBy === 'name' ? `for "${searchTerm}"` : ''} in {companyCountry === 'US' ? 'United States' : 'Canada'}
                   </Text>
                 )}
               </Box>
