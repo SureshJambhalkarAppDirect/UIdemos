@@ -6,6 +6,8 @@ import AdditionalInfoModal from './AdditionalInfoModal';
 import LinkedMembershipPage from './LinkedMembershipPage';
 import MarketplaceInterface from './MarketplaceInterface';
 import CustomerDetailsPage from './CustomerDetailsPage';
+import CreateCustomerDetailsPage from './pages/CreateCustomerDetailsPage';
+import UpdateCustomerDetailsPage from './pages/UpdateCustomerDetailsPage';
 import DummySidebar from './DummySidebar';
 
 const LGAFlow = () => {
@@ -14,6 +16,12 @@ const LGAFlow = () => {
   const [modalOpened, setModalOpened] = useState(false);
   const [modalScenario, setModalScenario] = useState<'visible' | 'hidden' | null>(null);
   const [opened, { toggle }] = useDisclosure();
+  // Track which flow we came from (create or update)
+  const [isCreateFlow, setIsCreateFlow] = useState(() => {
+    // Initialize from localStorage if available
+    const savedFlow = localStorage.getItem('lastFlowWasCreate');
+    return savedFlow === 'true';
+  });
 
   const handleOpenModal = (scenario: 'visible' | 'hidden') => {
     setModalScenario(scenario);
@@ -58,7 +66,7 @@ const LGAFlow = () => {
   const currentView = getCurrentView();
   const shouldHideSidebar = currentView === 'modal' || currentView === 'lm';
 
-  const handleNavigation = (view: string) => {
+  const handleNavigation = (view: string, flowType?: 'create' | 'update') => {
     switch (view) {
       case 'modal':
         navigate('/lga-flow/create-and-convert');
@@ -67,21 +75,14 @@ const LGAFlow = () => {
         navigate('/lga-flow/linked-membership');
         break;
       case 'customerDetails':
-        // By default, preserve the current path segment to know which flow originated the navigation
-        const currentPath = location.pathname;
+        // Store which flow we're coming from
+        if (flowType) {
+          const isCreate = flowType === 'create';
+          setIsCreateFlow(isCreate);
+          localStorage.setItem('lastFlowWasCreate', isCreate ? 'true' : 'false');
+        }
         
-        // If we're coming from the Create flow, store this info
-        const isFromCreateFlow = currentPath.includes('create-and-convert');
-        
-        // Store this preference in localStorage for persistence
-        localStorage.setItem('lastFlowWasCreate', isFromCreateFlow ? 'true' : 'false');
-        
-        navigate('/lga-flow/customer-details', { 
-          state: { 
-            fromPath: currentPath,
-            isCreateFlow: isFromCreateFlow
-          }
-        });
+        navigate('/lga-flow/customer-details');
         break;
       default:
         navigate('/lga-flow/create-and-convert');
@@ -109,15 +110,18 @@ const LGAFlow = () => {
     </Box>
   );
 
-  const CustomerDetailsPageWrapper = () => (
-    <Box style={{ 
-      maxWidth: '1200px',
-      margin: '0 auto',
-      width: '100%'
-    }}>
-      <CustomerDetailsPage />
-    </Box>
-  );
+  const CustomerDetailsPageWrapper = () => {
+    // Determine which details page to show based on which flow we came from
+    return (
+      <Box style={{ 
+        maxWidth: '1200px',
+        margin: '0 auto',
+        width: '100%'
+      }}>
+        {isCreateFlow ? <CreateCustomerDetailsPage /> : <UpdateCustomerDetailsPage />}
+      </Box>
+    );
+  };
 
   return (
     <>

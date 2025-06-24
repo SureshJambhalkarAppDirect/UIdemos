@@ -1,8 +1,7 @@
 import React from 'react';
 import { Paper, Title, Text, Group, Box, SimpleGrid, Button, Anchor, Divider, Stack, Center, ActionIcon } from '@mantine/core';
 import { IconDots } from '@tabler/icons-react';
-import LinkedMembershipPage from './LinkedMembershipPage';
-import { useLocation } from 'react-router-dom';
+import LinkedMembershipPage from '../LinkedMembershipPage';
 
 const CustomerHeader = () => (
   <Paper withBorder p="lg" radius="md">
@@ -22,45 +21,6 @@ const CustomerHeader = () => (
 );
 
 const CustomerInfo = () => {
-  const location = useLocation();
-  const [isCreateFlow, setIsCreateFlow] = React.useState(false);
-  
-  React.useEffect(() => {
-    const storageKey = 'lastFlowWasCreate';
-    
-    // First check for direct info in state
-    if (location.state?.isCreateFlow !== undefined) {
-      setIsCreateFlow(location.state.isCreateFlow);
-      return;
-    }
-    
-    // Next check URL patterns directly
-    if (location.pathname.includes('/create-and-convert')) {
-      setIsCreateFlow(true);
-      return;
-    }
-    
-    // If location state has path info, use it
-    if (location.state?.fromPath) {
-      const isCreate = location.state.fromPath.includes('create-and-convert');
-      setIsCreateFlow(isCreate);
-      return;
-    }
-    
-    // If direct tab navigation (Full Page button), check localStorage
-    if (location.pathname.endsWith('/customer-details')) {
-      const lastWasCreate = localStorage.getItem(storageKey) === 'true';
-      setIsCreateFlow(lastWasCreate);
-      return;
-    }
-    
-    // Default to false
-    setIsCreateFlow(false);
-  }, [location]);
-  
-  // Force the correct label based on the current tab
-  const label = isCreateFlow ? 'LGA customer?' : 'Convert to LGA from the next term?';
-  
   return (
     <Paper withBorder p="lg" radius="md" mt="md">
       <Text fw={500}>Cypress Cormier - Fay</Text>
@@ -116,18 +76,6 @@ const CustomerInfo = () => {
             color: '#856404',
             display: 'inline-block'
           }}>LGA customer?</Text>
-          <Text fw={500}>No</Text>
-        </Box>
-        <Box>
-          <Text size="xs" c="dimmed" style={{
-            backgroundColor: '#fff3cd', 
-            padding: '2px 6px', 
-            borderRadius: '3px', 
-            border: '1px solid #ffeaa7',
-            fontWeight: 600,
-            color: '#856404',
-            display: 'inline-block'
-          }}>Convert to LGA from the next term?</Text>
           <Text fw={500}>Yes</Text>
         </Box>
       </SimpleGrid>
@@ -214,7 +162,7 @@ const AppDirectFooter = () => (
   </Box>
 );
 
-const CustomerDetailsPage = () => {
+const CreateCustomerDetailsPage = () => {
   return (
     <Box>
         <CustomerHeader />
@@ -236,4 +184,4 @@ const CustomerDetailsPage = () => {
   );
 };
 
-export default CustomerDetailsPage; 
+export default CreateCustomerDetailsPage; 

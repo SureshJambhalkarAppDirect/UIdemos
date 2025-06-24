@@ -1,8 +1,7 @@
 import React from 'react';
 import { Paper, Title, Text, Group, Box, SimpleGrid, Button, Anchor, Divider, Stack, Center, ActionIcon } from '@mantine/core';
 import { IconDots } from '@tabler/icons-react';
-import LinkedMembershipPage from './LinkedMembershipPage';
-import { useLocation } from 'react-router-dom';
+import LinkedMembershipPage from '../LinkedMembershipPage';
 
 const CustomerHeader = () => (
   <Paper withBorder p="lg" radius="md">
@@ -22,45 +21,6 @@ const CustomerHeader = () => (
 );
 
 const CustomerInfo = () => {
-  const location = useLocation();
-  const [isCreateFlow, setIsCreateFlow] = React.useState(false);
-  
-  React.useEffect(() => {
-    const storageKey = 'lastFlowWasCreate';
-    
-    // First check for direct info in state
-    if (location.state?.isCreateFlow !== undefined) {
-      setIsCreateFlow(location.state.isCreateFlow);
-      return;
-    }
-    
-    // Next check URL patterns directly
-    if (location.pathname.includes('/create-and-convert')) {
-      setIsCreateFlow(true);
-      return;
-    }
-    
-    // If location state has path info, use it
-    if (location.state?.fromPath) {
-      const isCreate = location.state.fromPath.includes('create-and-convert');
-      setIsCreateFlow(isCreate);
-      return;
-    }
-    
-    // If direct tab navigation (Full Page button), check localStorage
-    if (location.pathname.endsWith('/customer-details')) {
-      const lastWasCreate = localStorage.getItem(storageKey) === 'true';
-      setIsCreateFlow(lastWasCreate);
-      return;
-    }
-    
-    // Default to false
-    setIsCreateFlow(false);
-  }, [location]);
-  
-  // Force the correct label based on the current tab
-  const label = isCreateFlow ? 'LGA customer?' : 'Convert to LGA from the next term?';
-  
   return (
     <Paper withBorder p="lg" radius="md" mt="md">
       <Text fw={500}>Cypress Cormier - Fay</Text>
@@ -214,7 +174,7 @@ const AppDirectFooter = () => (
   </Box>
 );
 
-const CustomerDetailsPage = () => {
+const UpdateCustomerDetailsPage = () => {
   return (
     <Box>
         <CustomerHeader />
@@ -236,4 +196,4 @@ const CustomerDetailsPage = () => {
   );
 };
 
-export default CustomerDetailsPage; 
+export default UpdateCustomerDetailsPage; 

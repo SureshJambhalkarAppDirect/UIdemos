@@ -34,7 +34,7 @@ interface MarketplaceInterfaceProps {
     visible: any;
     hidden: any;
   };
-  onNavigate?: (view: string) => void;
+  onNavigate?: (view: string, flowType?: 'create' | 'update') => void;
 }
 
 const MarketplaceInterface: React.FC<MarketplaceInterfaceProps> = ({ mockDataScenarios, onNavigate }) => {
@@ -85,8 +85,9 @@ const MarketplaceInterface: React.FC<MarketplaceInterfaceProps> = ({ mockDataSce
     setModalOpened(false);
     // Navigate to customer details view with info about which flow we're coming from
     if (onNavigate) {
-      localStorage.setItem('lastFlowWasCreate', activeTab === 'not-applicable' ? 'true' : 'false');
-      onNavigate('customerDetails');
+      // Pass the flow type directly to the navigation handler
+      const flowType = activeTab === 'not-applicable' ? 'create' : 'update';
+      onNavigate('customerDetails', flowType);
     }
   };
 
