@@ -22,6 +22,8 @@ const LGAFlow = () => {
     const savedFlow = localStorage.getItem('lastFlowWasCreate');
     return savedFlow === 'true';
   });
+  // State to control visibility of 3YC and HGO sections
+  const [hideVipPrograms, setHideVipPrograms] = useState(true);
 
   const handleOpenModal = (scenario: 'visible' | 'hidden') => {
     setModalScenario(scenario);
@@ -118,7 +120,10 @@ const LGAFlow = () => {
         margin: '0 auto',
         width: '100%'
       }}>
-        {isCreateFlow ? <CreateCustomerDetailsPage /> : <UpdateCustomerDetailsPage />}
+        {isCreateFlow ? 
+          <CreateCustomerDetailsPage hideVipPrograms={hideVipPrograms} /> : 
+          <UpdateCustomerDetailsPage hideVipPrograms={hideVipPrograms} />
+        }
       </Box>
     );
   };
@@ -152,6 +157,19 @@ const LGAFlow = () => {
           >
             Full Page
           </Button>
+          
+          {/* Toggle button hidden as requested
+          {currentView === 'customerDetails' && (
+            <Button 
+              onClick={() => setHideVipPrograms(!hideVipPrograms)} 
+              variant="outline" 
+              size="xs" 
+              color={hideVipPrograms ? "gray" : "blue"}
+            >
+              {hideVipPrograms ? "Show 3YC/HGO" : "Hide 3YC/HGO"}
+            </Button>
+          )}
+          */}
         </Group>
       </Box>
 

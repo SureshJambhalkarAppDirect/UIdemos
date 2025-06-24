@@ -162,23 +162,32 @@ const AppDirectFooter = () => (
   </Box>
 );
 
-const CreateCustomerDetailsPage = () => {
+interface CustomerDetailsPageProps {
+  hideVipPrograms?: boolean;
+}
+
+const CreateCustomerDetailsPage = ({ hideVipPrograms = false }: CustomerDetailsPageProps) => {
   return (
     <Box>
         <CustomerHeader />
         <CustomerInfo />
-        <Title order={3} my="xl">Value Incentive Plan (VIP) Programs</Title>
-        <SimpleGrid cols={2} spacing="xl">
-            <ProgramCard title="3-Year Commit (3YC)" ctaText="Apply for 3YC" findOutMore>
-                <Box />
-            </ProgramCard>
-            <ProgramCard title="High Growth Offers (HGO)" ctaText="Check Eligible Offers" findOutMore>
-                 <Text size="xs" c="dimmed">3YC is required before making a purchase.</Text>
-            </ProgramCard>
-            <Box style={{gridColumn: '1 / span 2'}} mt="xl">
-                <LinkedMembershipPage/>
-            </Box>
-        </SimpleGrid>
+        
+        {/* VIP Programs section - conditionally rendered based on hideVipPrograms prop */}
+        <Box style={{ display: hideVipPrograms ? 'none' : 'block' }}>
+          <Title order={3} my="xl">Value Incentive Plan (VIP) Programs</Title>
+          <SimpleGrid cols={2} spacing="xl">
+              <ProgramCard title="3-Year Commit (3YC)" ctaText="Apply for 3YC" findOutMore>
+                  <Box />
+              </ProgramCard>
+              <ProgramCard title="High Growth Offers (HGO)" ctaText="Check Eligible Offers" findOutMore>
+                   <Text size="xs" c="dimmed">3YC is required before making a purchase.</Text>
+              </ProgramCard>
+          </SimpleGrid>
+        </Box>
+        
+        <Box style={{gridColumn: '1 / span 2'}} mt="xl">
+            <LinkedMembershipPage/>
+        </Box>
         <AppDirectFooter />
     </Box>
   );
