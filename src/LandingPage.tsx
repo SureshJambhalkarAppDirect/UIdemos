@@ -12,9 +12,19 @@ const LandingPage: React.FC = () => {
       color: '#0629D3' // Royal blue from the palette
     },
     {
+      id: 'appinsights-ai',
+      demo: 'AppInsights AI',
+      color: '#f59e0b' // Amber/Orange - next color in flow
+    },
+    {
       id: 'company-flow',
       demo: 'Company Flow: Adobe Vendor Setup',
       color: '#0891b2' // Teal from AppDirect design system
+    },
+    {
+      id: 'adobesyncui',
+      demo: 'AC-14309: Adobe Sync UI',
+      color: '#9333ea' // Purple - complementary to the existing colors
     }
   ];
 
@@ -249,7 +259,7 @@ const LandingPage: React.FC = () => {
         <Grid gutter="xl" justify="center">
           {napkins.map((napkin, index) => (
             <Grid.Col key={napkin.id} span={{ base: 12, md: 6, lg: 4 }}>
-              <NapkinCard napkin={napkin} index={index} />
+              {napkin.id === 'company-flow' || napkin.id === 'adobesyncui' ? null : <NapkinCard napkin={napkin} index={index} />}
             </Grid.Col>
           ))}
         </Grid>
