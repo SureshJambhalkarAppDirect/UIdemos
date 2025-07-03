@@ -535,9 +535,21 @@ const CustomView = () => {
             size="xs"
             variant="light"
             leftSection={<IconRobot size={14} />}
-            onClick={() => setCurrentView('ai-assistant')}
+            onClick={() => {
+              setMessages([
+                {
+                  id: '1',
+                  type: 'assistant',
+                  content: 'Hi! I\'m your AI analytics assistant. What would you like to explore?',
+                  timestamp: new Date()
+                }
+              ]);
+              setCurrentInput('');
+              setIsProcessing(false);
+              setCurrentView('ai-assistant');
+            }}
           >
-            Ask Your Data
+            Ask AI
           </Button>
         </Group>
       </Group>
@@ -683,6 +695,7 @@ const CustomView = () => {
                   <Text size="sm" c="black" mt={4}>Get instant insights from your business data</Text>
                 </Box>
               </Group>
+              <CloseButton onClick={handleCancel} size="md" />
             </Group>
           </Box>
 
@@ -1126,9 +1139,21 @@ const CustomView = () => {
               <Button
                 variant="outline"
                 leftSection={<IconRobot size={16} />}
-                onClick={() => setCurrentView('ai-assistant')}
+                onClick={() => {
+                  setMessages([
+                    {
+                      id: '1',
+                      type: 'assistant',
+                      content: 'Hi! I\'m your AI analytics assistant. What would you like to explore?',
+                      timestamp: new Date()
+                    }
+                  ]);
+                  setCurrentInput('');
+                  setIsProcessing(false);
+                  setCurrentView('ai-assistant');
+                }}
               >
-                Ask Your Data
+                Ask AI
               </Button>
             </Group>
           </Stack>
@@ -1232,18 +1257,43 @@ const CustomView = () => {
                 justifyContent: 'center',
                 border: '2px dashed #e9ecef'
               }}
-              onClick={() => setCurrentView('add-insight')}
             >
-              <Stack align="center" gap="md">
-                <ActionIcon 
-                  variant="light" 
-                  color="blue" 
-                  size="xl" 
-                  radius="xl"
-                >
-                  <IconPlus size={24} />
-                </ActionIcon>
-                <Text size="sm" color="dimmed">Add another insight</Text>
+              <Stack align="center" gap="md" style={{ width: '100%' }}>
+                <Text size="sm" color="dimmed" fw={500}>Add another insight</Text>
+                <Group gap="sm" justify="center" style={{ width: '100%' }}>
+                  <Button
+                    variant="light"
+                    color="blue"
+                    size="sm"
+                    leftSection={<IconPlus size={16} />}
+                    onClick={() => setCurrentView('add-insight')}
+                    style={{ minWidth: '110px', flex: 1 }}
+                  >
+                    Add Insight
+                  </Button>
+                  <Button
+                    variant="light"
+                    color="blue"
+                    size="sm"
+                    leftSection={<IconRobot size={16} />}
+                    onClick={() => {
+                      setMessages([
+                        {
+                          id: '1',
+                          type: 'assistant',
+                          content: 'Hi! I\'m your AI analytics assistant. What would you like to explore?',
+                          timestamp: new Date()
+                        }
+                      ]);
+                      setCurrentInput('');
+                      setIsProcessing(false);
+                      setCurrentView('ai-assistant');
+                    }}
+                    style={{ minWidth: '90px', flex: 1 }}
+                  >
+                    Ask AI
+                  </Button>
+                </Group>
               </Stack>
             </Box>
           </Grid.Col>
