@@ -128,6 +128,61 @@ const assignedSeatsData = [
   { month: 'May', value: 8000 }
 ];
 
+// New mock data for the specific questions
+const companyGrowthData = [
+  { month: 'Jun', value: 12500 },
+  { month: 'Jul', value: 13200 },
+  { month: 'Aug', value: 14100 },
+  { month: 'Sep', value: 15300 },
+  { month: 'Oct', value: 16800 },
+  { month: 'Nov', value: 18500 },
+  { month: 'Dec', value: 20400 },
+  { month: 'Jan 2023', value: 22600 },
+  { month: 'Feb', value: 25100 },
+  { month: 'Mar', value: 28200 },
+  { month: 'Apr', value: 31800 },
+  { month: 'May', value: 35900 }
+];
+
+const paidInvoicesData = [
+  { month: 'Jun', value: 1850000, status: 'Paid' },
+  { month: 'Jul', value: 2100000, status: 'Paid' },
+  { month: 'Aug', value: 2400000, status: 'Paid' },
+  { month: 'Sep', value: 2200000, status: 'Paid' },
+  { month: 'Oct', value: 2650000, status: 'Paid' },
+  { month: 'Nov', value: 2900000, status: 'Paid' },
+  { month: 'Dec', value: 3100000, status: 'Paid' },
+  { month: 'Jan 2023', value: 2950000, status: 'Paid' },
+  { month: 'Feb', value: 3200000, status: 'Paid' },
+  { month: 'Mar', value: 3450000, status: 'Paid' },
+  { month: 'Apr', value: 3600000, status: 'Paid' },
+  { month: 'May', value: 3800000, status: 'Paid' }
+];
+
+const userGrowthData = [
+  { month: 'Jun', value: 145000 },
+  { month: 'Jul', value: 152000 },
+  { month: 'Aug', value: 159000 },
+  { month: 'Sep', value: 167000 },
+  { month: 'Oct', value: 176000 },
+  { month: 'Nov', value: 186000 },
+  { month: 'Dec', value: 197000 },
+  { month: 'Jan 2023', value: 209000 },
+  { month: 'Feb', value: 222000 },
+  { month: 'Mar', value: 236000 },
+  { month: 'Apr', value: 251000 },
+  { month: 'May', value: 267000 }
+];
+
+// Key insight data - single metric
+const orderVolumeInsight = {
+  value: 81,
+  label: 'New Subscriptions',
+  subtitle: 'Previous Month',
+  change: '+12%',
+  changeType: 'increase'
+};
+
 // Natural Language Processing utility
 const processNaturalLanguageQuery = (query: string) => {
   const lowerQuery = query.toLowerCase();
@@ -138,37 +193,58 @@ const processNaturalLanguageQuery = (query: string) => {
   let visualization = 'line';
   let timeframe = 'last_12_months';
   
-  // Detect metrics
-  if (lowerQuery.includes('revenue') || lowerQuery.includes('income') || lowerQuery.includes('money') || lowerQuery.includes('sales')) {
-    metric = 'revenue';
-  } else if (lowerQuery.includes('user') || lowerQuery.includes('customer') || lowerQuery.includes('people')) {
-    metric = 'users';
-  } else if (lowerQuery.includes('company') || lowerQuery.includes('companies') || lowerQuery.includes('business')) {
-    metric = 'companies';
-  } else if (lowerQuery.includes('payment') || lowerQuery.includes('paid') || lowerQuery.includes('received')) {
-    metric = 'payments';
-  } else if (lowerQuery.includes('seat') || lowerQuery.includes('license') || lowerQuery.includes('subscription')) {
-    metric = 'seats';
-  } else if (lowerQuery.includes('invoice') || lowerQuery.includes('bill')) {
-    metric = 'invoiced';
-  }
-  
-  // Detect visualization preference
-  if (lowerQuery.includes('bar') || lowerQuery.includes('column')) {
-    visualization = 'bar';
-  } else if (lowerQuery.includes('line') || lowerQuery.includes('trend') || lowerQuery.includes('over time')) {
+  // Detect specific questions first
+  if (lowerQuery.includes('company growth') || (lowerQuery.includes('company') && lowerQuery.includes('growth'))) {
+    metric = 'company_growth';
     visualization = 'line';
-  }
-  
-  // Detect intent
-  if (lowerQuery.includes('show') || lowerQuery.includes('display') || lowerQuery.includes('chart') || lowerQuery.includes('graph')) {
+    intent = 'show_growth';
+  } else if (lowerQuery.includes('paid invoices') || (lowerQuery.includes('paid') && lowerQuery.includes('invoice'))) {
+    metric = 'paid_invoices';
+    visualization = 'bar';
     intent = 'show_chart';
-  } else if (lowerQuery.includes('trend') || lowerQuery.includes('growing') || lowerQuery.includes('increasing')) {
-    intent = 'show_trend';
+  } else if (lowerQuery.includes('user growth') || (lowerQuery.includes('user') && lowerQuery.includes('growth'))) {
+    metric = 'user_growth';
     visualization = 'line';
-  } else if (lowerQuery.includes('compare') || lowerQuery.includes('comparison')) {
-    intent = 'compare';
+    intent = 'show_growth';
+  } else if (lowerQuery.includes('order volume') || lowerQuery.includes('total order')) {
+    metric = 'order_volume';
+    visualization = 'insight';
+    intent = 'show_insight';
+  } else {
+    // Detect metrics (fallback)
+    if (lowerQuery.includes('revenue') || lowerQuery.includes('income') || lowerQuery.includes('money') || lowerQuery.includes('sales')) {
+      metric = 'revenue';
+    } else if (lowerQuery.includes('user') || lowerQuery.includes('customer') || lowerQuery.includes('people')) {
+      metric = 'users';
+    } else if (lowerQuery.includes('company') || lowerQuery.includes('companies') || lowerQuery.includes('business')) {
+      metric = 'companies';
+    } else if (lowerQuery.includes('payment') || lowerQuery.includes('paid') || lowerQuery.includes('received')) {
+      metric = 'payments';
+    } else if (lowerQuery.includes('seat') || lowerQuery.includes('license') || lowerQuery.includes('subscription')) {
+      metric = 'seats';
+    } else if (lowerQuery.includes('invoice') || lowerQuery.includes('bill')) {
+      metric = 'invoiced';
+    }
+  }
+  
+  // Detect visualization preference (if not already set)
+  if (visualization === 'line' && (lowerQuery.includes('bar') || lowerQuery.includes('column'))) {
     visualization = 'bar';
+  } else if (visualization === 'bar' && (lowerQuery.includes('line') || lowerQuery.includes('trend') || lowerQuery.includes('over time'))) {
+    visualization = 'line';
+  }
+  
+  // Detect intent (if not already set)
+  if (intent === 'unknown') {
+    if (lowerQuery.includes('show') || lowerQuery.includes('display') || lowerQuery.includes('chart') || lowerQuery.includes('graph')) {
+      intent = 'show_chart';
+    } else if (lowerQuery.includes('trend') || lowerQuery.includes('growing') || lowerQuery.includes('increasing')) {
+      intent = 'show_trend';
+      visualization = 'line';
+    } else if (lowerQuery.includes('compare') || lowerQuery.includes('comparison')) {
+      intent = 'compare';
+      visualization = 'bar';
+    }
   }
   
   return {
@@ -183,10 +259,20 @@ const processNaturalLanguageQuery = (query: string) => {
 const calculateConfidence = (query: string, intent: string, metric: string): number => {
   let confidence = 0.3; // Base confidence
   
-  // Increase confidence based on keyword matches
-  const keywords = ['show', 'display', 'chart', 'revenue', 'users', 'trend', 'over time'];
-  const matches = keywords.filter(keyword => query.includes(keyword)).length;
-  confidence += (matches / keywords.length) * 0.7;
+  // High confidence for specific recognized patterns
+  const lowerQuery = query.toLowerCase();
+  if (lowerQuery.includes('company growth') || 
+      lowerQuery.includes('paid invoices') || 
+      lowerQuery.includes('user growth') || 
+      lowerQuery.includes('order volume') ||
+      lowerQuery.includes('total order')) {
+    confidence = 0.9;
+  } else {
+    // Increase confidence based on keyword matches
+    const keywords = ['show', 'display', 'chart', 'revenue', 'users', 'trend', 'over time', 'growth', 'paid', 'invoices', 'volume'];
+    const matches = keywords.filter(keyword => lowerQuery.includes(keyword)).length;
+    confidence += (matches / keywords.length) * 0.7;
+  }
   
   return Math.min(confidence, 1.0);
 };
@@ -203,6 +289,14 @@ const getDataForMetric = (metric: string) => {
       return receivedPaymentsData;
     case 'seats':
       return assignedSeatsData;
+    case 'company_growth':
+      return companyGrowthData;
+    case 'paid_invoices':
+      return paidInvoicesData;
+    case 'user_growth':
+      return userGrowthData;
+    case 'order_volume':
+      return orderVolumeInsight;
     default:
       return monthlyData;
   }
@@ -215,7 +309,11 @@ const getInsightTitle = (metric: string): string => {
     users: 'Total Users',
     companies: 'Total Companies',
     payments: 'Received Payments', 
-    seats: 'Assigned Seats'
+    seats: 'Assigned Seats',
+    company_growth: 'Company Growth',
+    paid_invoices: 'Paid Invoices',
+    user_growth: 'User Growth',
+    order_volume: 'Order Volume'
   };
   return titles[metric as keyof typeof titles] || 'Business Metric';
 };
@@ -224,7 +322,7 @@ const getSuggestionResponse = (query: string, analysis: any): string => {
   const { metric, confidence } = analysis;
   
   if (confidence < 0.5) {
-    return `I'm not entirely sure what you're looking for. Could you try asking something like "Show me revenue trends" or "Display user growth over time"?`;
+    return `I'm not entirely sure what you're looking for. Could you try asking something like "Show me company growth" or "Display user growth over time"?`;
   }
   
   const responses = {
@@ -233,7 +331,11 @@ const getSuggestionResponse = (query: string, analysis: any): string => {
     users: `I'll display your user growth. This metric shows how your customer base has evolved.`,
     companies: `Here's your company growth data. This shows how many new businesses have joined your platform.`,
     payments: `I'll show you received payments. This tracks the actual money collected from customers.`,
-    seats: `Here's your seat assignment data. This shows how license utilization has changed.`
+    seats: `Here's your seat assignment data. This shows how license utilization has changed.`,
+    company_growth: `I'll show you the company growth trends. This displays how your total companies have grown over time.`,
+    paid_invoices: `Here's your paid invoices data. This shows the monthly paid invoice amounts.`,
+    user_growth: `I'll display your user growth. This shows how your user base has grown cumulatively.`,
+    order_volume: `Here's your order volume insight. This shows the total order volume metrics.`
   };
   
   return responses[metric as keyof typeof responses] || `I'll create a visualization for your ${metric} data.`;
@@ -248,7 +350,7 @@ interface ChatMessage {
     type: string;
     visualization: string;
     title: string;
-    data: any[];
+    data: any[] | any;
   };
 }
 
@@ -285,7 +387,7 @@ const CustomView = () => {
     type: string;
     visualization: string;
     title: string;
-    data: any[];
+    data: any[] | any;
   }>>([]);
 
   // AI Assistant state
@@ -305,22 +407,28 @@ const CustomView = () => {
     { value: 'invoiced', label: 'Invoiced Amount' },
     { value: 'companies', label: 'New Companies' },
     { value: 'seats', label: 'New Subscriptions' },
-    { value: 'users', label: 'New Users' }
+    { value: 'users', label: 'New Users' },
+    { value: 'company_growth', label: 'Company Growth' },
+    { value: 'paid_invoices', label: 'Paid Invoices' },
+    { value: 'user_growth', label: 'User Growth' },
+    { value: 'order_volume', label: 'Order Volume' }
   ];
 
   const visualizationOptions = [
     { value: 'bar', label: 'Bar Graph (Default)' },
-    { value: 'line', label: 'Line Graph' }
+    { value: 'line', label: 'Line Graph' },
+    { value: 'insight', label: 'Key Insight' }
   ];
 
   // Handle AI message sending
-  const handleSendMessage = async () => {
-    if (!currentInput.trim()) return;
+  const handleSendMessage = async (messageText?: string) => {
+    const inputText = messageText || currentInput;
+    if (!inputText.trim()) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'user',
-      content: currentInput,
+      content: inputText,
       timestamp: new Date()
     };
 
@@ -330,12 +438,13 @@ const CustomView = () => {
 
     // Simulate processing delay
     setTimeout(() => {
-      const analysis = processNaturalLanguageQuery(currentInput);
+      const analysis = processNaturalLanguageQuery(inputText);
+      console.log('Analysis result:', analysis); // Debug log
       
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: '', // No text content - we'll show the chart directly
+        content: analysis.confidence > 0.5 ? '' : getSuggestionResponse(inputText, analysis),
         timestamp: new Date(),
         insight: analysis.confidence > 0.5 ? {
           type: analysis.metric,
@@ -397,10 +506,10 @@ const CustomView = () => {
   };
 
   const suggestedQuestions = [
-    "Show me revenue trends over the last year",
-    "How is user growth looking?",
-    "Display payment data as a bar chart",
-    "What's our invoiced amount trend?"
+    "Show me the company growth over the last year",
+    "Display paid invoices data as a bar chart",
+    "How is the user growth looking?",
+    "What's the total order volume for the previous month?"
   ];
 
   return (
@@ -664,56 +773,109 @@ const CustomView = () => {
                                   marginBottom: '16px'
                                 }}
                               >
-                                <ResponsiveContainer width="100%" height="100%">
-                                  {message.insight.visualization === 'bar' ? (
-                                    <BarChart data={message.insight.data.slice(-6)}>
-                                      <CartesianGrid strokeDasharray="2 2" vertical={false} stroke="#e9ecef" />
-                                      <XAxis 
-                                        dataKey="month" 
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fontSize: 10, fill: '#6c757d' }}
-                                      />
-                                      <YAxis hide />
-                                      <Tooltip 
-                                        contentStyle={{
-                                          backgroundColor: 'white',
-                                          border: '1px solid #dee2e6',
-                                          borderRadius: '6px',
-                                          fontSize: '12px'
-                                        }}
-                                      />
-                                      <Bar dataKey="value" fill="#014929" radius={[2, 2, 0, 0]} />
-                                    </BarChart>
-                                  ) : (
-                                    <LineChart data={message.insight.data.slice(-6)}>
-                                      <CartesianGrid strokeDasharray="2 2" vertical={false} stroke="#e9ecef" />
-                                      <XAxis 
-                                        dataKey="month"
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fontSize: 10, fill: '#6c757d' }}
-                                      />
-                                      <YAxis hide />
-                                      <Tooltip 
-                                        contentStyle={{
-                                          backgroundColor: 'white',
-                                          border: '1px solid #dee2e6',
-                                          borderRadius: '6px',
-                                          fontSize: '12px'
-                                        }}
-                                      />
-                                      <Line 
-                                        type="monotone" 
-                                        dataKey="value" 
-                                        stroke="#014929" 
-                                        strokeWidth={2}
-                                        dot={{ fill: '#014929', strokeWidth: 0, r: 3 }}
-                                        activeDot={{ r: 4, fill: '#014929' }}
-                                      />
-                                    </LineChart>
-                                  )}
-                                </ResponsiveContainer>
+                                {message.insight.visualization === 'insight' ? (
+                                  /* Key Insight Display */
+                                  <Box
+                                    style={{
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      height: '100%',
+                                      textAlign: 'center'
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        fontSize: '36px',
+                                        fontWeight: 'bold',
+                                        color: '#014929',
+                                        lineHeight: 1
+                                      }}
+                                    >
+                                      {message.insight.data.value}
+                                    </Text>
+                                    <Text
+                                      style={{
+                                        fontSize: '12px',
+                                        color: '#6c757d',
+                                        marginTop: '4px'
+                                      }}
+                                    >
+                                      {message.insight.data.label}
+                                    </Text>
+                                    <Text
+                                      style={{
+                                        fontSize: '10px',
+                                        color: '#6c757d',
+                                        marginTop: '2px'
+                                      }}
+                                    >
+                                      {message.insight.data.subtitle}
+                                    </Text>
+                                    <Text
+                                      style={{
+                                        fontSize: '10px',
+                                        color: message.insight.data.changeType === 'increase' ? '#22c55e' : '#ef4444',
+                                        marginTop: '4px',
+                                        fontWeight: 'bold'
+                                      }}
+                                    >
+                                      {message.insight.data.change}
+                                    </Text>
+                                  </Box>
+                                ) : (
+                                  <ResponsiveContainer width="100%" height="100%">
+                                    {message.insight.visualization === 'bar' ? (
+                                      <BarChart data={Array.isArray(message.insight.data) ? message.insight.data.slice(-6) : []}>
+                                        <CartesianGrid strokeDasharray="2 2" vertical={false} stroke="#e9ecef" />
+                                        <XAxis 
+                                          dataKey="month" 
+                                          axisLine={false}
+                                          tickLine={false}
+                                          tick={{ fontSize: 10, fill: '#6c757d' }}
+                                        />
+                                        <YAxis hide />
+                                        <Tooltip 
+                                          contentStyle={{
+                                            backgroundColor: 'white',
+                                            border: '1px solid #dee2e6',
+                                            borderRadius: '6px',
+                                            fontSize: '12px'
+                                          }}
+                                        />
+                                        <Bar dataKey="value" fill="#014929" radius={[2, 2, 0, 0]} />
+                                      </BarChart>
+                                    ) : (
+                                      <LineChart data={Array.isArray(message.insight.data) ? message.insight.data.slice(-6) : []}>
+                                        <CartesianGrid strokeDasharray="2 2" vertical={false} stroke="#e9ecef" />
+                                        <XAxis 
+                                          dataKey="month"
+                                          axisLine={false}
+                                          tickLine={false}
+                                          tick={{ fontSize: 10, fill: '#6c757d' }}
+                                        />
+                                        <YAxis hide />
+                                        <Tooltip 
+                                          contentStyle={{
+                                            backgroundColor: 'white',
+                                            border: '1px solid #dee2e6',
+                                            borderRadius: '6px',
+                                            fontSize: '12px'
+                                          }}
+                                        />
+                                        <Line 
+                                          type="monotone" 
+                                          dataKey="value" 
+                                          stroke="#014929" 
+                                          strokeWidth={2}
+                                          dot={{ fill: '#014929', strokeWidth: 0, r: 3 }}
+                                          activeDot={{ r: 4, fill: '#014929' }}
+                                        />
+                                      </LineChart>
+                                    )}
+                                  </ResponsiveContainer>
+                                )}
                               </Box>
 
                               <Group justify="space-between" align="center">
@@ -843,7 +1005,7 @@ const CustomView = () => {
                           radius="md"
                           fullWidth
                           leftSection={<IconBulb size={14} />}
-                          onClick={() => setCurrentInput(question)}
+                          onClick={() => handleSendMessage(question)}
                           style={{
                             backgroundColor: '#F0F8FF',
                             border: '1px solid #ABE7FF',
@@ -884,7 +1046,7 @@ const CustomView = () => {
                     placeholder="Ask me anything about your business data..."
                     value={currentInput}
                     onChange={(e) => setCurrentInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                     disabled={isProcessing}
                     size="md"
                     radius="lg"
@@ -902,7 +1064,7 @@ const CustomView = () => {
                     }}
                   />
                   <ActionIcon 
-                    onClick={handleSendMessage}
+                    onClick={() => handleSendMessage()}
                     disabled={!currentInput.trim() || isProcessing}
                     size="xl"
                     radius="lg"
@@ -977,30 +1139,84 @@ const CustomView = () => {
           {insights.map((insight, index) => (
             <Grid.Col key={index} span={6}>
               <ChartCard title={insight.title}>
-                <ResponsiveContainer width="100%" height={200}>
-                  {insight.visualization === 'bar' ? (
-                    <BarChart data={insight.data}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#6366f1" />
-                    </BarChart>
-                  ) : (
-                    <LineChart data={insight.data}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line 
-                        type="monotone" 
-                        dataKey="value" 
-                        stroke="#6366f1" 
-                        dot={{ fill: '#6366f1' }}
-                      />
-                    </LineChart>
-                  )}
-                </ResponsiveContainer>
+                {insight.visualization === 'insight' ? (
+                  /* Key Insight Display */
+                  <Box
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '200px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: '72px',
+                        fontWeight: 'bold',
+                        color: '#6366f1',
+                        lineHeight: 1
+                      }}
+                    >
+                      {insight.data.value}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: '18px',
+                        color: '#374151',
+                        marginTop: '8px',
+                        fontWeight: 500
+                      }}
+                    >
+                      {insight.data.label}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: '14px',
+                        color: '#6b7280',
+                        marginTop: '4px'
+                      }}
+                    >
+                      {insight.data.subtitle}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: '14px',
+                        color: insight.data.changeType === 'increase' ? '#22c55e' : '#ef4444',
+                        marginTop: '8px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      {insight.data.change}
+                    </Text>
+                  </Box>
+                ) : (
+                  <ResponsiveContainer width="100%" height={200}>
+                    {insight.visualization === 'bar' ? (
+                      <BarChart data={Array.isArray(insight.data) ? insight.data : []}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="value" fill="#6366f1" />
+                      </BarChart>
+                    ) : (
+                      <LineChart data={Array.isArray(insight.data) ? insight.data : []}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip />
+                        <Line 
+                          type="monotone" 
+                          dataKey="value" 
+                          stroke="#6366f1" 
+                          dot={{ fill: '#6366f1' }}
+                        />
+                      </LineChart>
+                    )}
+                  </ResponsiveContainer>
+                )}
               </ChartCard>
             </Grid.Col>
           ))}
