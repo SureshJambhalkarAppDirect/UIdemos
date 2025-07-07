@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Container, Title, Text, Group, Card, Button, Stack, Grid } from '@mantine/core';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
-  const napkins = [
+  const allNapkins = [
     {
       id: 'lga-flow',
       demo: 'AC-14371: Large Government Agencies',
@@ -15,6 +15,11 @@ const LandingPage: React.FC = () => {
       id: 'appinsights-ai',
       demo: 'AppInsights AI',
       color: '#f59e0b' // Amber/Orange - next color in flow
+    },
+    {
+      id: 'adobe-recommendations',
+      demo: 'Adobe Recommendations',
+      color: '#dc2626' // Adobe red theme
     },
     {
       id: 'company-flow',
@@ -27,6 +32,25 @@ const LandingPage: React.FC = () => {
       color: '#9333ea' // Purple - complementary to the existing colors
     }
   ];
+
+  const [napkins, setNapkins] = useState(allNapkins);
+
+  useEffect(() => {
+    // Read visibility settings from localStorage
+    const saved = localStorage.getItem('napkin-visibility');
+    if (saved) {
+      try {
+        const settings = JSON.parse(saved);
+        const filteredNapkins = allNapkins.filter(napkin => 
+          settings[napkin.id] !== false // Show napkin unless explicitly hidden
+        );
+        setNapkins(filteredNapkins);
+      } catch (e) {
+        console.error('Error loading napkin visibility settings:', e);
+        setNapkins(allNapkins); // Fallback to showing all
+      }
+    }
+  }, []);
 
   const handleNapkinClick = (napkinId: string) => {
     navigate(`/${napkinId}`);
