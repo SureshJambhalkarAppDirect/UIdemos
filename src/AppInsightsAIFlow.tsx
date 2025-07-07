@@ -55,6 +55,9 @@ import {
   IconChartLine,
   IconChartPie
 } from '@tabler/icons-react';
+import { processQueryWithLLM } from './services/llmService';
+import { isConfigured, getConfig } from './services/llmConfig';
+import LLMSettingsModal from './components/LLMSettingsModal';
 import { 
   LineChart, 
   Line, 
@@ -304,7 +307,7 @@ const processNaturalLanguageQuery = (query: string, lastContext?: { entity: stri
   // Detect visualization preference
   let visualization = 'bar'; // default
   if (/line|trend|over time|timeline/i.test(query)) {
-    visualization = 'line';
+      visualization = 'line';
   } else if (/insight|metric|number|kpi|summary|total/i.test(query)) {
     visualization = 'insight';
   } else if (/bar|column|chart|graph/i.test(query)) {
@@ -314,8 +317,8 @@ const processNaturalLanguageQuery = (query: string, lastContext?: { entity: stri
   // Determine intent
   let intent = 'show_chart';
   if (/compare|comparison/i.test(query)) {
-    intent = 'compare';
-    visualization = 'bar';
+      intent = 'compare';
+      visualization = 'bar';
   } else if (/trend|over time/i.test(query)) {
     intent = 'show_trend';
     visualization = 'line';
@@ -323,13 +326,13 @@ const processNaturalLanguageQuery = (query: string, lastContext?: { entity: stri
     intent = 'show_insight';
     visualization = 'insight';
   }
-
+  
   if (bestMatch) {
-    return {
-      intent,
+  return {
+    intent,
       entity: bestMatch.entity,
       metric: bestMatch.metric,
-      visualization,
+    visualization,
       timeframe: 'last_12_months',
       confidence: Math.min(bestMatch.confidence, 0.95),
       isValidCombination: true,
@@ -540,6 +543,8 @@ interface ChatMessage {
     title: string;
     data: any[] | any;
   };
+  source?: 'llm' | 'pattern' | 'cache';
+  confidence?: number;
 }
 
 const ChartCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -597,6 +602,9 @@ const CustomView = () => {
     metric: string;
     title: string;
   } | null>(null);
+
+  // LLM Settings modal
+  const [settingsModalOpened, setSettingsModalOpened] = useState(false);
 
   const entityOptions = [
     { value: 'companies', label: 'Companies' },
@@ -676,10 +684,18 @@ const CustomView = () => {
     setCurrentInput('');
     setIsProcessing(true);
 
-    // Simulate processing delay
-    setTimeout(() => {
-      const analysis = processNaturalLanguageQuery(inputText, lastInsightContext);
-      console.log('Analysis result:', analysis); // Debug log
+    try {
+      // Use LLM API with fallback to pattern matching
+      const llmResponse = await processQueryWithLLM(inputText, lastInsightContext);
+      console.log('LLM Response:', llmResponse); // Debug log
+      
+      const analysis = llmResponse.data;
+      if (!analysis) {
+        throw new Error('No analysis data received');
+      }
+      
+      // Determine source for visual indicator
+      const source = llmResponse.usedCache ? 'cache' : (llmResponse.fallbackUsed ? 'pattern' : 'llm');
       
       let responseContent = '';
       let insight: {
@@ -724,12 +740,63 @@ const CustomView = () => {
         type: 'assistant',
         content: responseContent,
         timestamp: new Date(),
-        insight
+        insight,
+        source,
+        confidence: analysis.confidence
       };
 
       setMessages(prev => [...prev, assistantMessage]);
       setIsProcessing(false);
-    }, 1500);
+    } catch (error) {
+      console.error('LLM processing failed:', error);
+      
+      // Fallback to pattern matching
+      const analysis = processNaturalLanguageQuery(inputText, lastInsightContext);
+      
+      let responseContent = '';
+      let insight: {
+        type: string;
+        visualization: string;
+        title: string;
+        data: any[] | any;
+      } | undefined = undefined;
+
+      if (analysis.confidence > 0.5 && analysis.metric) {
+        insight = {
+          type: analysis.metric,
+          visualization: analysis.visualization,
+          title: getInsightTitle(analysis.metric),
+          data: getDataForMetric(analysis.metric, analysis.visualization)
+        };
+
+        setLastInsightContext({
+          entity: analysis.entity || '',
+          metric: analysis.metric,
+          title: getInsightTitle(analysis.metric)
+        });
+
+        if (analysis.isContextual) {
+          responseContent = `I've updated the visualization to a ${analysis.visualization} chart for you!`;
+        } else {
+          responseContent = '';
+        }
+      } else {
+        responseContent = "I'm having trouble understanding your request. Try asking something like 'Show me new companies as a bar chart'";
+      }
+      
+      const assistantMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: responseContent,
+        timestamp: new Date(),
+        insight,
+        source: 'pattern',
+        confidence: analysis.confidence
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+      setIsProcessing(false);
+    }
   };
 
   // Insight coming from AI assistant
@@ -796,7 +863,7 @@ const CustomView = () => {
         "Change to bar chart", 
         "Show as insight",
         "Display new companies over time as a line graph"
-      ];
+  ];
     }
     return suggestedQuestions;
   };
@@ -841,6 +908,28 @@ const CustomView = () => {
           >
             Ask AI
           </Button>
+          {currentView === 'ai-assistant' && (
+            <Group gap="xs">
+              {/* Debug Status Badge */}
+              <Badge
+                variant="light"
+                size="xs"
+                color={isConfigured() ? 'green' : 'yellow'}
+                style={{ fontSize: '10px' }}
+              >
+                                 {isConfigured() ? `✓ AI: ${getConfig().defaultModel.slice(0, 12)}${getConfig().defaultModel.length > 12 ? '...' : ''}` : '⚠ Pattern Only'}
+              </Badge>
+              <ActionIcon
+                variant="light"
+                size="lg"
+                onClick={() => setSettingsModalOpened(true)}
+                color={isConfigured() ? "green" : "orange"}
+                title="Configure LLM API Settings"
+              >
+                <IconSettings size={16} />
+              </ActionIcon>
+            </Group>
+          )}
         </Group>
       </Group>
 
@@ -1076,9 +1165,25 @@ const CustomView = () => {
                                     Here's a preview of your data visualization
                                   </Text>
                                 </Box>
+                                <Group gap="xs">
                                 <Badge variant="light" color="green" size="sm">
                                   Preview
                                 </Badge>
+                                  {/* Source Indicator */}
+                                  {message.source && (
+                                    <Badge 
+                                      variant="dot" 
+                                      size="xs"
+                                      color={
+                                        message.source === 'llm' ? 'blue' : 
+                                        message.source === 'cache' ? 'violet' : 'orange'
+                                      }
+                                    >
+                                      {message.source === 'llm' ? '🤖 AI' : 
+                                       message.source === 'cache' ? '⚡ Cache' : '🔍 Pattern'}
+                                    </Badge>
+                                  )}
+                                </Group>
                               </Group>
                               
                               {/* Mini Chart Preview - Fixed Width */}
@@ -1232,9 +1337,27 @@ const CustomView = () => {
                                 boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
                               }}
                             >
+                              <Group justify="space-between" align="flex-start" mb="sm">
+                                <Box flex={1}>
                               <Text size="sm" style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
-                                I'm not entirely sure what you're looking for. Could you try asking something like "Show me revenue trends" or "Display user growth over time"?
+                                    {message.content || "I'm not entirely sure what you're looking for. Could you try asking something like 'Show me revenue trends' or 'Display user growth over time'?"}
                               </Text>
+                                </Box>
+                                {/* Source Indicator */}
+                                {message.source && (
+                                  <Badge 
+                                    variant="dot" 
+                                    size="xs"
+                                    color={
+                                      message.source === 'llm' ? 'blue' : 
+                                      message.source === 'cache' ? 'violet' : 'orange'
+                                    }
+                                  >
+                                    {message.source === 'llm' ? '🤖 AI' : 
+                                     message.source === 'cache' ? '⚡ Cache' : '🔍 Pattern'}
+                                  </Badge>
+                                )}
+                              </Group>
                             </Paper>
                           ) : (
                             <Paper 
@@ -1444,26 +1567,26 @@ const CustomView = () => {
             >
               Add Insight
             </Button>
-                                <Button
-                    variant="outline"
-                    leftSection={<IconRobot size={16} />}
-                    onClick={() => {
-                      setMessages([
-                        {
-                          id: '1',
-                          type: 'assistant',
-                          content: 'Hi! I\'m your AI analytics assistant. What would you like to explore?',
-                          timestamp: new Date()
-                        }
-                      ]);
-                      setCurrentInput('');
-                      setIsProcessing(false);
+              <Button
+                variant="outline"
+                leftSection={<IconRobot size={16} />}
+                onClick={() => {
+                  setMessages([
+                    {
+                      id: '1',
+                      type: 'assistant',
+                      content: 'Hi! I\'m your AI analytics assistant. What would you like to explore?',
+                      timestamp: new Date()
+                    }
+                  ]);
+                  setCurrentInput('');
+                  setIsProcessing(false);
                       setLastInsightContext(null);
-                      setCurrentView('ai-assistant');
-                    }}
-                  >
-                    Ask AI
-                  </Button>
+                  setCurrentView('ai-assistant');
+                }}
+              >
+                Ask AI
+              </Button>
             </Group>
           </Stack>
         </Box>
@@ -1609,6 +1732,12 @@ const CustomView = () => {
           </Grid.Col>
         </Grid>
       )}
+      
+      {/* LLM Settings Modal */}
+      <LLMSettingsModal 
+        opened={settingsModalOpened} 
+        onClose={() => setSettingsModalOpened(false)} 
+      />
     </Box>
   );
 };
