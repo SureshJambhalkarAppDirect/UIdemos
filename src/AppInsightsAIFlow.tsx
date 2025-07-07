@@ -183,77 +183,200 @@ const orderVolumeInsight = {
   changeType: 'increase'
 };
 
-// Natural Language Processing utility
-const processNaturalLanguageQuery = (query: string) => {
+// Enhanced Natural Language Processing utility with context memory
+const processNaturalLanguageQuery = (query: string, lastContext?: { entity: string; metric: string; title: string } | null) => {
   const lowerQuery = query.toLowerCase();
   
-  // Intent classification
-  let intent = 'unknown';
-  let metric = 'revenue';
-  let visualization = 'line';
-  let timeframe = 'last_12_months';
+  // Check for visualization-only requests first (context-dependent)
+  const visualizationOnlyPatterns = [
+    /^make it a? (line|bar|insight)/i,
+    /^change to (line|bar|insight)/i,
+    /^show as (line|bar|insight)/i,
+    /^i want a? (line|bar|insight)/i,
+    /^(line|bar|insight) chart$/i,
+    /^make this a? (line|bar|insight)/i,
+    /^convert to (line|bar|insight)/i,
+    /^give me a? (line|bar|insight)/i,
+    /^create a? (line|bar|insight)/i
+  ];
+
+  // Extract visualization from context request
+  let contextVisualization: string | null = null;
+  for (const pattern of visualizationOnlyPatterns) {
+    const match = query.match(pattern);
+    if (match) {
+      const vizType = match[1]?.toLowerCase();
+      if (vizType === 'line') contextVisualization = 'line';
+      else if (vizType === 'bar') contextVisualization = 'bar';
+      else if (vizType === 'insight') contextVisualization = 'insight';
+      break;
+    }
+  }
+
+  // If this is a visualization-only request and we have context
+  if (contextVisualization && lastContext) {
+    return {
+      intent: 'change_visualization',
+      entity: lastContext.entity,
+      metric: lastContext.metric,
+      visualization: contextVisualization,
+      timeframe: 'last_12_months',
+      confidence: 0.95,
+      isValidCombination: true,
+      suggestions: null,
+      isContextual: true
+    };
+  }
+
+  // If visualization-only request but no context
+  if (contextVisualization && !lastContext) {
+    return {
+      intent: 'need_context',
+      entity: null,
+      metric: null,
+      visualization: contextVisualization,
+      timeframe: 'last_12_months',
+      confidence: 0.3,
+      isValidCombination: false,
+      suggestions: ["I'd like to help you create a " + contextVisualization + " chart! What data would you like to visualize? Try asking something like 'Show me commission tickets by provider as a " + contextVisualization + " chart'"]
+    };
+  }
   
-  // Detect specific questions first
-  if (lowerQuery.includes('company growth') || (lowerQuery.includes('company') && lowerQuery.includes('growth'))) {
-    metric = 'company_growth';
+  // Direct pattern matching for supported combinations (most specific patterns first!)
+  const patterns = [
+    // Provider Sales entity - specific patterns first
+    { pattern: /commission tickets by provider/i, entity: 'provider_sales', metric: 'commission_tickets_by_provider', confidence: 0.95 },
+    { pattern: /commission tickets by status/i, entity: 'provider_sales', metric: 'commission_tickets_by_status', confidence: 0.95 },
+    { pattern: /commission tickets by age/i, entity: 'provider_sales', metric: 'commission_tickets_by_age', confidence: 0.95 },
+    { pattern: /commission tickets open v?s? resolved/i, entity: 'provider_sales', metric: 'commission_tickets_open_vs_resolved', confidence: 0.95 },
+    { pattern: /commissions by provider/i, entity: 'provider_sales', metric: 'commissions_by_provider', confidence: 0.95 },
+    { pattern: /booked order amount by product category/i, entity: 'provider_sales', metric: 'booked_order_amount_by_product_category', confidence: 0.95 },
+    { pattern: /booked order amount by provider/i, entity: 'provider_sales', metric: 'booked_order_amount_by_provider', confidence: 0.95 },
+    { pattern: /booked order amount/i, entity: 'provider_sales', metric: 'booked_order_amount', confidence: 0.9 },
+    { pattern: /quotes created/i, entity: 'provider_sales', metric: 'quotes_created', confidence: 0.9 },
+    { pattern: /net billed/i, entity: 'provider_sales', metric: 'net_billed', confidence: 0.9 },
+    { pattern: /commission tickets/i, entity: 'provider_sales', metric: 'commission_tickets', confidence: 0.8 },
+    { pattern: /booked orders?/i, entity: 'provider_sales', metric: 'booked_orders', confidence: 0.8 },
+    
+    // Opportunities entity - specific patterns first
+    { pattern: /opportunities by status/i, entity: 'opportunities', metric: 'opportunities_by_status', confidence: 0.95 },
+    { pattern: /pending approval opportunities by age/i, entity: 'opportunities', metric: 'pending_approval_opportunities_by_age', confidence: 0.95 },
+    { pattern: /total opportunities/i, entity: 'opportunities', metric: 'total_opportunities', confidence: 0.9 },
+    { pattern: /new opportunities/i, entity: 'opportunities', metric: 'new_opportunities', confidence: 0.9 },
+    { pattern: /sales velocity/i, entity: 'opportunities', metric: 'sales_velocity', confidence: 0.9 },
+    { pattern: /opportunities/i, entity: 'opportunities', metric: 'new_opportunities', confidence: 0.7 },
+    
+    // Users entity - specific patterns first
+    { pattern: /new users?/i, entity: 'users', metric: 'new_users', confidence: 0.9 },
+    { pattern: /users?/i, entity: 'users', metric: 'new_users', confidence: 0.7 },
+    
+    // Companies entity - specific patterns first
+    { pattern: /new compan(y|ies)/i, entity: 'companies', metric: 'new_companies', confidence: 0.9 },
+    { pattern: /compan(y|ies)/i, entity: 'companies', metric: 'new_companies', confidence: 0.7 },
+    
+    // Orders entity
+    { pattern: /new subscriptions?/i, entity: 'orders', metric: 'new_subscriptions', confidence: 0.9 },
+    { pattern: /orders?/i, entity: 'orders', metric: 'new_subscriptions', confidence: 0.7 },
+    
+    // Invoices entity
+    { pattern: /invoiced amount/i, entity: 'invoices', metric: 'invoiced_amount', confidence: 0.9 },
+    { pattern: /invoice/i, entity: 'invoices', metric: 'invoiced_amount', confidence: 0.7 }
+  ];
+
+  // Find best matching pattern
+  let bestMatch: { pattern: RegExp; entity: string; metric: string; confidence: number } | null = null;
+  let bestConfidence = 0;
+  
+  console.log('Analyzing query:', query); // Debug log
+  
+  for (const pattern of patterns) {
+    if (pattern.pattern.test(query)) {
+      console.log('Pattern matched:', pattern.pattern, 'with confidence:', pattern.confidence); // Debug log
+      if (pattern.confidence > bestConfidence) {
+        bestMatch = pattern;
+        bestConfidence = pattern.confidence;
+      }
+    }
+  }
+  
+  console.log('Best match found:', bestMatch); // Debug log
+
+  // Detect visualization preference
+  let visualization = 'bar'; // default
+  if (/line|trend|over time|timeline/i.test(query)) {
     visualization = 'line';
-    intent = 'show_growth';
-  } else if (lowerQuery.includes('paid invoices') || (lowerQuery.includes('paid') && lowerQuery.includes('invoice'))) {
-    metric = 'paid_invoices';
-    visualization = 'bar';
-    intent = 'show_chart';
-  } else if (lowerQuery.includes('user growth') || (lowerQuery.includes('user') && lowerQuery.includes('growth'))) {
-    metric = 'user_growth';
-    visualization = 'line';
-    intent = 'show_growth';
-  } else if (lowerQuery.includes('order volume') || lowerQuery.includes('total order')) {
-    metric = 'order_volume';
+  } else if (/insight|metric|number|kpi|summary|total/i.test(query)) {
     visualization = 'insight';
-    intent = 'show_insight';
-  } else {
-    // Detect metrics (fallback)
-    if (lowerQuery.includes('revenue') || lowerQuery.includes('income') || lowerQuery.includes('money') || lowerQuery.includes('sales')) {
-      metric = 'revenue';
-    } else if (lowerQuery.includes('user') || lowerQuery.includes('customer') || lowerQuery.includes('people')) {
-      metric = 'users';
-    } else if (lowerQuery.includes('company') || lowerQuery.includes('companies') || lowerQuery.includes('business')) {
-      metric = 'companies';
-    } else if (lowerQuery.includes('payment') || lowerQuery.includes('paid') || lowerQuery.includes('received')) {
-      metric = 'payments';
-    } else if (lowerQuery.includes('seat') || lowerQuery.includes('license') || lowerQuery.includes('subscription')) {
-      metric = 'seats';
-    } else if (lowerQuery.includes('invoice') || lowerQuery.includes('bill')) {
-      metric = 'invoiced';
-    }
-  }
-  
-  // Detect visualization preference (if not already set)
-  if (visualization === 'line' && (lowerQuery.includes('bar') || lowerQuery.includes('column'))) {
+  } else if (/bar|column|chart|graph/i.test(query)) {
     visualization = 'bar';
-  } else if (visualization === 'bar' && (lowerQuery.includes('line') || lowerQuery.includes('trend') || lowerQuery.includes('over time'))) {
+  }
+
+  // Determine intent
+  let intent = 'show_chart';
+  if (/compare|comparison/i.test(query)) {
+    intent = 'compare';
+    visualization = 'bar';
+  } else if (/trend|over time/i.test(query)) {
+    intent = 'show_trend';
     visualization = 'line';
+  } else if (/insight|summary/i.test(query)) {
+    intent = 'show_insight';
+    visualization = 'insight';
   }
-  
-  // Detect intent (if not already set)
-  if (intent === 'unknown') {
-    if (lowerQuery.includes('show') || lowerQuery.includes('display') || lowerQuery.includes('chart') || lowerQuery.includes('graph')) {
-      intent = 'show_chart';
-    } else if (lowerQuery.includes('trend') || lowerQuery.includes('growing') || lowerQuery.includes('increasing')) {
-      intent = 'show_trend';
-      visualization = 'line';
-    } else if (lowerQuery.includes('compare') || lowerQuery.includes('comparison')) {
-      intent = 'compare';
-      visualization = 'bar';
-    }
+
+  if (bestMatch) {
+    return {
+      intent,
+      entity: bestMatch.entity,
+      metric: bestMatch.metric,
+      visualization,
+      timeframe: 'last_12_months',
+      confidence: Math.min(bestMatch.confidence, 0.95),
+      isValidCombination: true,
+      suggestions: null,
+      isContextual: false
+    };
   }
-  
+
+  // Fallback to old logic if no patterns match
   return {
-    intent,
-    metric,
-    visualization,
-    timeframe,
-    confidence: calculateConfidence(lowerQuery, intent, metric)
+    intent: 'unknown',
+    entity: null,
+    metric: 'revenue',
+    visualization: 'line',
+    timeframe: 'last_12_months',
+    confidence: 0.2,
+    isValidCombination: false,
+    suggestions: ["Try asking something like 'Show me new users as an insight' or 'Display commission tickets by provider'"],
+    isContextual: false
   };
+};
+
+// Generate helpful suggestions when combinations aren't valid
+const generateSuggestions = (entity: string | null, widget: string | null, validCombinations: any): string[] => {
+  const suggestions: string[] = [];
+  
+  if (entity && !widget) {
+    const availableWidgets = validCombinations[entity] || [];
+    if (availableWidgets.length > 0) {
+      suggestions.push(`For ${entity}, you can visualize: ${availableWidgets.slice(0, 3).map((w: string) => w.replace(/_/g, ' ')).join(', ')}${availableWidgets.length > 3 ? '...' : ''}`);
+    }
+  } else if (widget && !entity) {
+    // Find which entity this widget belongs to
+    for (const [ent, widgets] of Object.entries(validCombinations)) {
+      if (Array.isArray(widgets) && widgets.includes(widget)) {
+        suggestions.push(`"${widget.replace(/_/g, ' ')}" is available under ${ent}`);
+        break;
+      }
+    }
+  } else if (entity && widget) {
+    const availableWidgets = validCombinations[entity] || [];
+    suggestions.push(`${entity} supports: ${availableWidgets.slice(0, 3).map((w: string) => w.replace(/_/g, ' ')).join(', ')}`);
+  } else {
+    suggestions.push("Try asking for something like 'Show me new companies as a bar chart' or 'Display commission tickets by provider'");
+  }
+  
+  return suggestions;
 };
 
 const calculateConfidence = (query: string, intent: string, metric: string): number => {
@@ -277,13 +400,44 @@ const calculateConfidence = (query: string, intent: string, metric: string): num
   return Math.min(confidence, 1.0);
 };
 
-const getDataForMetric = (metric: string) => {
+const getDataForMetric = (metric: string, visualization: string = 'bar') => {
+  // If it's an insight visualization, return insight data structure
+  if (visualization === 'insight') {
+    switch (metric) {
+      case 'new_users':
+        return { value: 267000, label: 'New Users', subtitle: 'This Month', change: '+12%', changeType: 'increase' };
+      case 'new_companies':
+        return { value: 35900, label: 'New Companies', subtitle: 'This Month', change: '+8%', changeType: 'increase' };
+      case 'commission_tickets_by_provider':
+        return { value: 142, label: 'Commission Tickets', subtitle: 'By Provider', change: '+5%', changeType: 'increase' };
+      case 'commission_tickets_by_status':
+        return { value: 89, label: 'Commission Tickets', subtitle: 'By Status', change: '-3%', changeType: 'decrease' };
+      case 'commission_tickets':
+        return { value: 156, label: 'Commission Tickets', subtitle: 'Total', change: '+7%', changeType: 'increase' };
+      case 'booked_orders':
+        return { value: 2840, label: 'Booked Orders', subtitle: 'This Month', change: '+15%', changeType: 'increase' };
+      case 'quotes_created':
+        return { value: 3920, label: 'Quotes Created', subtitle: 'This Month', change: '+22%', changeType: 'increase' };
+      case 'opportunities_by_status':
+        return { value: 76, label: 'Opportunities', subtitle: 'By Status', change: '+9%', changeType: 'increase' };
+      case 'new_opportunities':
+        return { value: 124, label: 'New Opportunities', subtitle: 'This Month', change: '+18%', changeType: 'increase' };
+      case 'new_subscriptions':
+        return { value: 4580, label: 'New Subscriptions', subtitle: 'This Month', change: '+11%', changeType: 'increase' };
+      case 'invoiced_amount':
+        return { value: '$4.5M', label: 'Invoiced Amount', subtitle: 'This Month', change: '+6%', changeType: 'increase' };
+      default:
+        return { value: 81, label: 'Business Metric', subtitle: 'Current Period', change: '+12%', changeType: 'increase' };
+    }
+  }
+
+  // For chart visualizations, return chart data
   switch (metric) {
     case 'revenue':
-    case 'invoiced':
+    case 'invoiced_amount':
       return invoicedData;
-    case 'users':
-    case 'companies':
+    case 'new_users':
+    case 'new_companies':
       return monthlyData;
     case 'payments':
       return receivedPaymentsData;
@@ -297,6 +451,17 @@ const getDataForMetric = (metric: string) => {
       return userGrowthData;
     case 'order_volume':
       return orderVolumeInsight;
+    case 'commission_tickets_by_provider':
+    case 'commission_tickets_by_status':
+    case 'commission_tickets':
+    case 'booked_orders':
+    case 'quotes_created':
+      return invoicedData; // Using invoiced data as placeholder for provider sales charts
+    case 'opportunities_by_status':
+    case 'new_opportunities':
+      return monthlyData; // Using monthly data as placeholder for opportunities
+    case 'new_subscriptions':
+      return assignedSeatsData; // Using seats data as placeholder for subscriptions
     default:
       return monthlyData;
   }
@@ -306,14 +471,37 @@ const getInsightTitle = (metric: string): string => {
   const titles = {
     revenue: 'Revenue Trend',
     invoiced: 'Invoiced Amount',
+    invoiced_amount: 'Invoiced Amount',
     users: 'Total Users',
+    new_users: 'New Users',
     companies: 'Total Companies',
+    new_companies: 'New Companies',
     payments: 'Received Payments', 
     seats: 'Assigned Seats',
+    new_subscriptions: 'New Subscriptions',
     company_growth: 'Company Growth',
     paid_invoices: 'Paid Invoices',
     user_growth: 'User Growth',
-    order_volume: 'Order Volume'
+    order_volume: 'Order Volume',
+    commission_tickets: 'Commission Tickets',
+    commission_tickets_by_provider: 'Commission Tickets by Provider',
+    commission_tickets_by_status: 'Commission Tickets by Status',
+    commission_tickets_by_age: 'Commission Tickets by Age',
+    commission_tickets_open_vs_resolved: 'Commission Tickets Open vs Resolved',
+    commissions_by_provider: 'Commissions by Provider',
+    net_billed: 'Net Billed',
+    booked_orders: 'Booked Orders',
+    booked_order_amount: 'Booked Order Amount',
+    booked_order_amount_by_product_category: 'Booked Order Amount by Product Category',
+    booked_order_amount_by_provider: 'Booked Order Amount by Provider',
+    provisioned_order_amount_pending_commissions: 'Provisioned Order Amount Pending Commissions',
+    provisioned_order_count_pending_commissions: 'Provisioned Order Count Pending Commissions',
+    quotes_created: 'Quotes Created',
+    new_opportunities: 'New Opportunities',
+    total_opportunities: 'Total Opportunities',
+    opportunities_by_status: 'Opportunities by Status',
+    pending_approval_opportunities_by_age: 'Pending Approval Opportunities by Age',
+    sales_velocity: 'Sales Velocity'
   };
   return titles[metric as keyof typeof titles] || 'Business Metric';
 };
@@ -381,6 +569,7 @@ const ChartCard = ({ title, children }: { title: string; children: React.ReactNo
 const CustomView = () => {
   // Track which view we're showing
   const [currentView, setCurrentView] = useState<'dashboard' | 'add-insight' | 'ai-assistant'>('dashboard');
+  const [entity, setEntity] = useState<string | null>(null);
   const [widgetType, setWidgetType] = useState<string | null>(null);
   const [visualizationType, setVisualizationType] = useState<string | null>('bar');
   const [insights, setInsights] = useState<Array<{
@@ -402,17 +591,68 @@ const CustomView = () => {
   const [currentInput, setCurrentInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const widgetOptions = [
-    { value: 'marketplace', label: 'Marketplace' },
-    { value: 'invoiced', label: 'Invoiced Amount' },
-    { value: 'companies', label: 'New Companies' },
-    { value: 'seats', label: 'New Subscriptions' },
-    { value: 'users', label: 'New Users' },
-    { value: 'company_growth', label: 'Company Growth' },
-    { value: 'paid_invoices', label: 'Paid Invoices' },
-    { value: 'user_growth', label: 'User Growth' },
-    { value: 'order_volume', label: 'Order Volume' }
+  // Context memory for AI
+  const [lastInsightContext, setLastInsightContext] = useState<{
+    entity: string;
+    metric: string;
+    title: string;
+  } | null>(null);
+
+  const entityOptions = [
+    { value: 'companies', label: 'Companies' },
+    { value: 'invoices', label: 'Invoices' },
+    { value: 'leads', label: 'Leads' },
+    { value: 'opportunities', label: 'Opportunities' },
+    { value: 'orders', label: 'Orders' },
+    { value: 'payments', label: 'Payments' },
+    { value: 'users', label: 'Users' },
+    { value: 'provider_sales', label: 'Provider Sales' }
   ];
+
+  const widgetTypesByEntity = {
+    companies: [
+      { value: 'new_companies', label: 'New Companies' }
+    ],
+    invoices: [
+      { value: 'invoiced_amount', label: 'Invoiced Amount' }
+    ],
+    orders: [
+      { value: 'new_subscriptions', label: 'New Subscriptions' }
+    ],
+    users: [
+      { value: 'new_users', label: 'New Users' }
+    ],
+    provider_sales: [
+      { value: 'booked_orders', label: 'Booked Orders' },
+      { value: 'booked_order_amount', label: 'Booked Order Amount' },
+      { value: 'quotes_created', label: 'Quotes Created' },
+      { value: 'commission_tickets', label: 'Commission Tickets' },
+      { value: 'commission_tickets_by_age', label: 'Commission Tickets by Age' },
+      { value: 'commission_tickets_by_provider', label: 'Commission Tickets by Provider' },
+      { value: 'commission_tickets_by_status', label: 'Commission Tickets by Status' },
+      { value: 'commission_tickets_open_vs_resolved', label: 'Commission Tickets Open v/s Resolved' },
+      { value: 'commissions_by_provider', label: 'Commissions by Provider' },
+      { value: 'net_billed', label: 'Net Billed' },
+      { value: 'booked_order_amount_by_product_category', label: 'Booked Order Amount by Product Category' },
+      { value: 'booked_order_amount_by_provider', label: 'Booked Order Amount by Provider' },
+      { value: 'provisioned_order_amount_pending_commissions', label: 'Provisioned Order Amount Pending Commissions' },
+      { value: 'provisioned_order_count_pending_commissions', label: 'Provisioned Order Count Pending Commissions' }
+    ],
+    opportunities: [
+      { value: 'new_opportunities', label: 'New Opportunities' },
+      { value: 'total_opportunities', label: 'Total Opportunities' },
+      { value: 'opportunities_by_status', label: 'Opportunities by Status' },
+      { value: 'pending_approval_opportunities_by_age', label: 'Pending Approval Opportunities by Age' },
+      { value: 'sales_velocity', label: 'Sales Velocity' }
+    ],
+    leads: [],
+    payments: []
+  };
+
+  const getWidgetOptions = () => {
+    if (!entity) return [];
+    return widgetTypesByEntity[entity as keyof typeof widgetTypesByEntity] || [];
+  };
 
   const visualizationOptions = [
     { value: 'bar', label: 'Bar Graph (Default)' },
@@ -438,20 +678,53 @@ const CustomView = () => {
 
     // Simulate processing delay
     setTimeout(() => {
-      const analysis = processNaturalLanguageQuery(inputText);
+      const analysis = processNaturalLanguageQuery(inputText, lastInsightContext);
       console.log('Analysis result:', analysis); // Debug log
+      
+      let responseContent = '';
+      let insight: {
+        type: string;
+        visualization: string;
+        title: string;
+        data: any[] | any;
+      } | undefined = undefined;
+
+              if (analysis.confidence > 0.5 && analysis.metric) {
+          // Successful analysis with data
+          insight = {
+            type: analysis.metric,
+            visualization: analysis.visualization,
+            title: getInsightTitle(analysis.metric),
+            data: getDataForMetric(analysis.metric, analysis.visualization)
+          };
+
+        // Update context for future requests
+        setLastInsightContext({
+          entity: analysis.entity || '',
+          metric: analysis.metric,
+          title: getInsightTitle(analysis.metric)
+        });
+
+        // Different messages for contextual vs new requests
+        if (analysis.isContextual) {
+          responseContent = `I've updated the visualization to a ${analysis.visualization} chart for you!`;
+        } else {
+          responseContent = '';
+        }
+      } else if (analysis.intent === 'need_context') {
+        // Visualization-only request without context
+        responseContent = analysis.suggestions?.[0] || "What data would you like to visualize?";
+      } else {
+        // Low confidence or unknown request
+        responseContent = getSuggestionResponse(inputText, analysis);
+      }
       
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: analysis.confidence > 0.5 ? '' : getSuggestionResponse(inputText, analysis),
+        content: responseContent,
         timestamp: new Date(),
-        insight: analysis.confidence > 0.5 ? {
-          type: analysis.metric,
-          visualization: analysis.visualization,
-          title: getInsightTitle(analysis.metric),
-          data: getDataForMetric(analysis.metric)
-        } : undefined
+        insight
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -472,16 +745,17 @@ const CustomView = () => {
 
   // Handle manual insight creation
   const handleManualInsight = () => {
-    if (!widgetType || !visualizationType) return;
+    if (!entity || !widgetType || !visualizationType) return;
     
     setInsights([...insights, {
       type: widgetType,
       visualization: visualizationType,
       title: getInsightTitle(widgetType),
-      data: getDataForMetric(widgetType)
+      data: getDataForMetric(widgetType, visualizationType)
     }]);
     
     // Reset form
+    setEntity(null);
     setWidgetType(null);
     setVisualizationType('bar');
     setCurrentView('dashboard');
@@ -489,10 +763,11 @@ const CustomView = () => {
 
   // Cancel and go back to dashboard
   const handleCancel = () => {
+    setEntity(null);
     setWidgetType(null);
     setVisualizationType('bar');
     setCurrentView('dashboard');
-    // Reset AI messages when closing
+    // Reset AI messages and context when closing
     setMessages([
       {
         id: '1',
@@ -503,14 +778,28 @@ const CustomView = () => {
     ]);
     setCurrentInput('');
     setIsProcessing(false);
+    setLastInsightContext(null);
   };
 
   const suggestedQuestions = [
-    "Show me the company growth over the last year",
-    "Display paid invoices data as a bar chart",
-    "How is the user growth looking?",
-    "What's the total order volume for the previous month?"
+    "Show me commission tickets by provider as a bar chart",
+    "Display new companies over time as a line graph", 
+    "What's the total new users insight for this month?",
+    "Create an opportunities by status visualization"
   ];
+
+  // Dynamic suggested questions based on context
+  const getContextualSuggestions = () => {
+    if (lastInsightContext) {
+      return [
+        "Make it a line chart",
+        "Change to bar chart", 
+        "Show as insight",
+        "Display new companies over time as a line graph"
+      ];
+    }
+    return suggestedQuestions;
+  };
 
   return (
     <Box p="md">
@@ -546,6 +835,7 @@ const CustomView = () => {
               ]);
               setCurrentInput('');
               setIsProcessing(false);
+              setLastInsightContext(null);
               setCurrentView('ai-assistant');
             }}
           >
@@ -558,7 +848,7 @@ const CustomView = () => {
         /* Add Insight Form - Inline */
         <Box
           style={{
-            border: '2px solid #ff6b6b',
+            border: '1px solid #e5e7eb',
             borderRadius: '8px',
             padding: '24px',
             backgroundColor: 'white'
@@ -573,19 +863,35 @@ const CustomView = () => {
           </Group>
 
         <Grid gutter="md">
-          <Grid.Col span={6}>
+          <Grid.Col span={4}>
+            <Text size="sm" mb={4}>
+              Entity <span style={{ color: 'red' }}>*</span>
+            </Text>
+            <Select
+              placeholder="Select an entity"
+              data={entityOptions}
+              value={entity}
+              onChange={(value) => {
+                setEntity(value);
+                setWidgetType(null); // Reset widget type when entity changes
+              }}
+              searchable
+            />
+          </Grid.Col>
+          <Grid.Col span={4}>
             <Text size="sm" mb={4}>
               Widget Type <span style={{ color: 'red' }}>*</span>
             </Text>
             <Select
               placeholder="Select a widget type"
-              data={widgetOptions}
+              data={getWidgetOptions()}
               value={widgetType}
               onChange={setWidgetType}
               searchable
+              disabled={!entity}
             />
           </Grid.Col>
-          <Grid.Col span={6}>
+          <Grid.Col span={4}>
             <Text size="sm" mb={4}>
               Visualisation Type <span style={{ color: 'red' }}>*</span>
             </Text>
@@ -598,7 +904,7 @@ const CustomView = () => {
           </Grid.Col>
         </Grid>
 
-        {!widgetType ? (
+        {!entity || !widgetType ? (
           <Box 
             style={{ 
               height: '400px',
@@ -623,7 +929,7 @@ const CustomView = () => {
                 <IconLayoutGrid size={24} color="#228be6" />
               </Box>
               <Text size="sm" color="dimmed" ta="center" maw={300}>
-                First, add a widget type. Then, choose and filter your data to create your first Insight.
+                First, select an entity and widget type. Then, choose your visualization to create your first Insight.
               </Text>
             </Stack>
           </Box>
@@ -653,7 +959,7 @@ const CustomView = () => {
                 <Button
                   color="blue"
                   onClick={handleManualInsight}
-                  disabled={!widgetType || !visualizationType}
+                  disabled={!entity || !widgetType || !visualizationType}
                 >
                   Add Insight
                 </Button>
@@ -1006,11 +1312,13 @@ const CustomView = () => {
               </Box>
 
               {/* Suggested Questions */}
-              {messages.length <= 1 && (
+              {(messages.length <= 1 || lastInsightContext) && (
                 <Box>
-                  <Text size="sm" fw={500} c="#011B58" mb="sm">Try asking:</Text>
+                  <Text size="sm" fw={500} c="#011B58" mb="sm">
+                    {lastInsightContext ? `Try asking (based on your last chart: ${lastInsightContext.title}):` : 'Try asking:'}
+                  </Text>
                   <Grid gutter="xs">
-                    {suggestedQuestions.map((question, index) => (
+                    {getContextualSuggestions().map((question, index) => (
                       <Grid.Col key={index} span={6}>
                         <Button
                           variant="light"
@@ -1020,16 +1328,16 @@ const CustomView = () => {
                           leftSection={<IconBulb size={14} />}
                           onClick={() => handleSendMessage(question)}
                           style={{
-                            backgroundColor: '#F0F8FF',
-                            border: '1px solid #ABE7FF',
-                            color: '#0629D3',
+                            backgroundColor: lastInsightContext ? '#FFF8E7' : '#F0F8FF',
+                            border: `1px solid ${lastInsightContext ? '#FFD43B' : '#ABE7FF'}`,
+                            color: lastInsightContext ? '#B8860B' : '#0629D3',
                             fontWeight: 400,
                             height: '40px',
                             justifyContent: 'flex-start',
                             padding: '0 12px',
                             '&:hover': {
-                              backgroundColor: '#E6F3FF',
-                              borderColor: '#0629D3'
+                              backgroundColor: lastInsightContext ? '#FFF4D6' : '#E6F3FF',
+                              borderColor: lastInsightContext ? '#B8860B' : '#0629D3'
                             }
                           }}
                         >
@@ -1136,25 +1444,26 @@ const CustomView = () => {
             >
               Add Insight
             </Button>
-              <Button
-                variant="outline"
-                leftSection={<IconRobot size={16} />}
-                onClick={() => {
-                  setMessages([
-                    {
-                      id: '1',
-                      type: 'assistant',
-                      content: 'Hi! I\'m your AI analytics assistant. What would you like to explore?',
-                      timestamp: new Date()
-                    }
-                  ]);
-                  setCurrentInput('');
-                  setIsProcessing(false);
-                  setCurrentView('ai-assistant');
-                }}
-              >
-                Ask AI
-              </Button>
+                                <Button
+                    variant="outline"
+                    leftSection={<IconRobot size={16} />}
+                    onClick={() => {
+                      setMessages([
+                        {
+                          id: '1',
+                          type: 'assistant',
+                          content: 'Hi! I\'m your AI analytics assistant. What would you like to explore?',
+                          timestamp: new Date()
+                        }
+                      ]);
+                      setCurrentInput('');
+                      setIsProcessing(false);
+                      setLastInsightContext(null);
+                      setCurrentView('ai-assistant');
+                    }}
+                  >
+                    Ask AI
+                  </Button>
             </Group>
           </Stack>
         </Box>
@@ -1287,6 +1596,7 @@ const CustomView = () => {
                       ]);
                       setCurrentInput('');
                       setIsProcessing(false);
+                      setLastInsightContext(null);
                       setCurrentView('ai-assistant');
                     }}
                     style={{ minWidth: '90px', flex: 1 }}
