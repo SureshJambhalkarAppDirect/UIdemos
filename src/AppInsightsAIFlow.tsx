@@ -55,9 +55,10 @@ import {
   IconChartLine,
   IconChartPie
 } from '@tabler/icons-react';
-import { processQueryWithLLM } from './services/llmService';
+import { processQueryWithLLM, getContextualSuggestions as getEnhancedSuggestions } from './services/llmService';
 import { isConfigured, getConfig } from './services/llmConfig';
 import LLMSettingsModal from './components/LLMSettingsModal';
+import ResponseFeedback from './components/ResponseFeedback';
 import { 
   LineChart, 
   Line, 
@@ -532,6 +533,50 @@ const getSuggestionResponse = (query: string, analysis: any): string => {
   return responses[metric as keyof typeof responses] || `I'll create a visualization for your ${metric} data.`;
 };
 
+// Enhanced suggestion response with contextual help
+const getEnhancedSuggestionResponse = (
+  query: string, 
+  analysis: any, 
+  suggestions: { suggestions: string[], category: string, examples: string[] }
+): string => {
+  const { suggestions: msgs, category, examples } = suggestions;
+  
+  let response = '';
+  
+  // Primary suggestion message
+  if (msgs.length > 0) {
+    response = msgs[0];
+  } else {
+    response = "I'd like to help you visualize your data.";
+  }
+  
+  // Add contextual guidance based on category
+  switch (category) {
+    case 'partial_entity_match':
+      response += `\n\nHere are some things you can ask for:\n${examples.map(ex => `• ${ex}`).join('\n')}`;
+      break;
+    case 'partial_metric_match':
+      response += `\n\n${examples[0]}`;
+      break;
+    case 'general_guidance':
+      response += `\n\nTry these examples:\n${examples.map(ex => `• ${ex}`).join('\n')}`;
+      break;
+    case 'clarification_needed':
+      response += `\n\n${examples.join('\n')}`;
+      break;
+  }
+  
+  // Add confidence indicator for transparency
+  if (analysis.confidence) {
+    const confidencePercent = Math.round(analysis.confidence * 100);
+    if (confidencePercent > 0 && confidencePercent < 70) {
+      response += `\n\n*I'm ${confidencePercent}% confident in my understanding of your request.*`;
+    }
+  }
+  
+  return response;
+};
+
 interface ChatMessage {
   id: string;
   type: 'user' | 'assistant';
@@ -731,8 +776,15 @@ const CustomView = () => {
         // Visualization-only request without context
         responseContent = analysis.suggestions?.[0] || "What data would you like to visualize?";
       } else {
-        // Low confidence or unknown request
-        responseContent = getSuggestionResponse(inputText, analysis);
+        // Low confidence or unknown request - use enhanced graceful fallbacks
+        const suggestions = getEnhancedSuggestions(
+          inputText,
+          analysis.entity,
+          analysis.metric,
+          analysis.confidence
+        );
+        
+        responseContent = getEnhancedSuggestionResponse(inputText, analysis, suggestions);
       }
       
       const assistantMessage: ChatMessage = {
@@ -1325,6 +1377,17 @@ const CustomView = () => {
                                   Add to Dashboard
               </Button>
             </Group>
+                              
+                              {/* Feedback Component for Insights */}
+                              <Box mt="sm" pt="sm" style={{ borderTop: '1px solid #f0f0f0' }}>
+                                <ResponseFeedback
+                                  messageId={message.id}
+                                  query={messages[index - 1]?.content || ''}
+                                  response={message.content}
+                                  source={message.source || 'pattern'}
+                                  confidence={message.confidence}
+                                />
+                              </Box>
                             </Paper>
                           ) : message.type === 'assistant' && !message.insight ? (
                             /* AI Response without chart (low confidence) */
@@ -1358,6 +1421,17 @@ const CustomView = () => {
                                   </Badge>
                                 )}
                               </Group>
+                              
+                              {/* Feedback Component for Suggestions */}
+                              <Box mt="sm" pt="sm" style={{ borderTop: '1px solid #f0f0f0' }}>
+                                <ResponseFeedback
+                                  messageId={message.id}
+                                  query={messages[index - 1]?.content || ''}
+                                  response={message.content}
+                                  source={message.source || 'pattern'}
+                                  confidence={message.confidence}
+                                />
+                              </Box>
                             </Paper>
                           ) : (
                             <Paper 

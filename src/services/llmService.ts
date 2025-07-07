@@ -88,6 +88,8 @@ const ANALYTICS_FUNCTION_SCHEMA = {
 };
 
 // Main LLM processing function
+// Export enhanced suggestion function (will be defined below)
+
 export const processQueryWithLLM = async (
   query: string, 
   lastContext?: { entity: string; metric: string; title: string } | null
@@ -313,20 +315,100 @@ const validateEntityMetricCombination = (entity: string | null, metric: string |
   return validCombinations[entity]?.includes(metric) || false;
 };
 
-// Generate helpful suggestions
-const generateSuggestions = (entity: string | null, metric: string | null): string[] => {
-  const suggestions: string[] = [];
+// Enhanced suggestion engine for graceful fallbacks
+const generateContextualSuggestions = (
+  query: string,
+  entity: string | null, 
+  metric: string | null,
+  confidence: number
+): { suggestions: string[], category: string, examples: string[] } => {
+  const lowerQuery = query.toLowerCase();
   
+  // Detect what user might be asking for
   if (entity && !metric) {
+    // User mentioned entity but no clear metric
     const validMetrics = getValidMetricsForEntity(entity);
-    if (validMetrics.length > 0) {
-      suggestions.push(`For ${entity}, try: ${validMetrics.slice(0, 3).join(', ')}`);
-    }
-  } else {
-    suggestions.push("Try asking for 'new companies as a bar chart' or 'commission tickets by provider'");
+    return {
+      suggestions: [`I recognize you want ${entity} data. Here are some options:`],
+      category: 'partial_entity_match',
+      examples: validMetrics.slice(0, 4)
+    };
   }
   
-  return suggestions;
+  if (!entity && metric) {
+    // User mentioned metric-like words but no entity
+    return {
+      suggestions: [`I heard "${metric}" but need to know what type of data you want.`],
+      category: 'partial_metric_match', 
+      examples: ['Try: "new companies", "user growth", "commission tickets by provider"']
+    };
+  }
+  
+  if (confidence < 0.3) {
+    // Very low confidence - provide general guidance
+    const detectedWords = extractKeywords(lowerQuery);
+    return {
+      suggestions: generateSmartSuggestions(detectedWords),
+      category: 'general_guidance',
+      examples: [
+        'Show me new companies as a bar chart',
+        'Display commission tickets by provider', 
+        'What are the total new users?',
+        'User growth over time as a line graph'
+      ]
+    };
+  }
+  
+  // Moderate confidence but invalid combination
+  return {
+    suggestions: [`I understand you want data visualization, but need clarification.`],
+    category: 'clarification_needed',
+    examples: [
+      'Try being more specific about the data type',
+      'Mention if you want charts, graphs, or insights',
+      'Examples: "revenue trends", "user metrics", "sales data"'
+    ]
+  };
+};
+
+// Extract meaningful keywords from user query
+const extractKeywords = (query: string): string[] => {
+  const businessTerms = [
+    'revenue', 'sales', 'profit', 'growth', 'users', 'customers', 'orders',
+    'commission', 'tickets', 'opportunities', 'companies', 'invoices',
+    'trends', 'analytics', 'metrics', 'data', 'chart', 'graph', 'insight'
+  ];
+  
+  return businessTerms.filter(term => query.includes(term));
+};
+
+// Generate smart suggestions based on detected keywords
+const generateSmartSuggestions = (keywords: string[]): string[] => {
+  const suggestions: string[] = [];
+  
+  if (keywords.includes('revenue') || keywords.includes('sales')) {
+    suggestions.push("For revenue data, try: 'invoiced amount' or 'booked orders'");
+  }
+  if (keywords.includes('users') || keywords.includes('customers')) {
+    suggestions.push("For user data, try: 'new users' or 'user growth over time'");
+  }
+  if (keywords.includes('commission') || keywords.includes('tickets')) {
+    suggestions.push("For commission data, try: 'commission tickets by provider'");
+  }
+  if (keywords.length === 0) {
+    suggestions.push("I can help you visualize business data like companies, users, orders, and revenue.");
+  }
+  
+  return suggestions.length > 0 ? suggestions : [
+    "I can show charts for companies, users, orders, invoices, and sales data.",
+    "Try asking about specific metrics like 'new users' or 'revenue trends'."
+  ];
+};
+
+// Legacy function for backward compatibility
+const generateSuggestions = (entity: string | null, metric: string | null): string[] => {
+  const enhanced = generateContextualSuggestions('', entity, metric, 0.5);
+  return enhanced.suggestions;
 };
 
 const getValidMetricsForEntity = (entity: string): string[] => {
@@ -423,4 +505,7 @@ export const clearQueryCache = () => {
 export const getCacheStats = () => ({
   size: queryCache.size,
   entries: Array.from(queryCache.keys())
-}); 
+});
+
+// Export enhanced suggestion function
+export const getContextualSuggestions = generateContextualSuggestions; 
