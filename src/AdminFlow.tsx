@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 
 // Default napkin configuration
+// New napkins are not visible by default (enabled: false)
+// Only LGA and Recommendations are visible by default
 const DEFAULT_NAPKINS = [
   { id: 'lga-flow', name: 'AC-14371: Large Government Agencies', enabled: true },
-  { id: 'appinsights-ai', name: 'AppInsights AI', enabled: true },
+  { id: 'appinsights-ai', name: 'AppInsights AI', enabled: false },
   { id: 'adobe-recommendations', name: 'Adobe Recommendations', enabled: true },
-  { id: 'company-flow', name: 'Company Flow: Adobe Vendor Setup', enabled: true },
-  { id: 'adobesyncui', name: 'AC-14309: Adobe Sync UI', enabled: true },
-  { id: 'adobe-new-functionalities', name: 'Adobe New Functionalities Tester', enabled: true }
+  { id: 'company-flow', name: 'Company Flow: Adobe Vendor Setup', enabled: false },
+  { id: 'adobesyncui', name: 'AC-14309: Adobe Sync UI', enabled: false },
+  { id: 'adobe-new-functionalities', name: 'Adobe New Functionalities Tester', enabled: false }
 ];
 
 const AdminLogin = () => {
