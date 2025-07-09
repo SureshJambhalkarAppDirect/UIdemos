@@ -47,8 +47,10 @@ import {
   IconPlus,
   IconMinus,
   IconExternalLink,
+  IconLock,
 } from '@tabler/icons-react';
 import { adobeConfigService } from '../services/adobeConfig';
+import { adobeAuthService, AuthenticationStatus } from '../services/adobeAuth';
 
 // Types based on Adobe API documentation
 interface FlexibleDiscount {
@@ -141,6 +143,15 @@ export const FlexibleDiscounts: React.FC<{
   onToggle?: () => void;
 }> = ({ expanded = true, onToggle }) => {
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
+  const [authStatus, setAuthStatus] = useState<AuthenticationStatus>(adobeAuthService.getAuthStatus());
+
+  useEffect(() => {
+    const unsubscribe = adobeAuthService.onStatusChange((status) => {
+      setAuthStatus(status);
+    });
+
+    return unsubscribe;
+  }, []);
 
   const toggleBlock = (blockId: string) => {
     const newExpanded = new Set(expandedBlocks);
@@ -151,6 +162,43 @@ export const FlexibleDiscounts: React.FC<{
     }
     setExpandedBlocks(newExpanded);
   };
+
+  // Show authentication required message if not connected
+  if (!authStatus.isAuthenticated) {
+    return (
+      <Card withBorder shadow="sm" radius="md" style={{ padding: '1rem' }}>
+        <Group justify="space-between" align="center" mb="md">
+          <Group gap="xs">
+            <Text fw={700} size="xl">
+              Adobe Flexible Discounts Management
+            </Text>
+            <Badge size="sm" variant="light" color="red">
+              Authentication Required
+            </Badge>
+          </Group>
+          {onToggle && (
+            <ActionIcon variant="subtle" onClick={onToggle}>
+              {expanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+            </ActionIcon>
+          )}
+        </Group>
+
+        <Collapse in={expanded} transitionDuration={400} transitionTimingFunction="ease-in-out">
+          <Alert
+            icon={<IconLock size={16} />}
+            title="Authentication Required"
+            color="red"
+            variant="light"
+          >
+            <Text size="sm">
+              You must be authenticated with Adobe to access Flexible Discounts Management features.
+              Please connect your Adobe account using the authentication panel above.
+            </Text>
+          </Alert>
+        </Collapse>
+      </Card>
+    );
+  }
 
   return (
     <Card withBorder shadow="sm" radius="md" style={{ padding: '1rem' }}>
@@ -170,12 +218,17 @@ export const FlexibleDiscounts: React.FC<{
         )}
       </Group>
 
-      <Collapse in={expanded}>
+      <Collapse in={expanded} transitionDuration={400} transitionTimingFunction="ease-in-out">
         <Stack gap="lg">
           {/* Block 1: Get Flexible Discounts */}
           <GetFlexibleDiscountsBlock
             expanded={expandedBlocks.has('get-discounts')}
             onToggle={() => toggleBlock('get-discounts')}
+            onExpandBlock={(blockId) => {
+              const newExpanded = new Set(expandedBlocks);
+              newExpanded.add(blockId);
+              setExpandedBlocks(newExpanded);
+            }}
           />
 
           {/* Block 2: Create Order and Preview Order */}
@@ -201,11 +254,339 @@ export const FlexibleDiscounts: React.FC<{
   );
 };
 
+// Comprehensive Discount Card Component
+const DiscountCard: React.FC<{ 
+  discount: FlexibleDiscount;
+  onUseInOrder?: (discount: FlexibleDiscount) => void;
+}> = ({ discount, onUseInOrder }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [detailsModalOpened, setDetailsModalOpened] = useState(false);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'ACTIVE': return 'green';
+      case 'INACTIVE': return 'yellow';
+      case 'EXPIRED': return 'red';
+      default: return 'gray';
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const formatDiscountValue = (outcome: any) => {
+    if (outcome.type === 'PERCENTAGE_DISCOUNT') {
+      return `${outcome.discountValues[0]?.value || 0}% off`;
+    } else if (outcome.type === 'FIXED_DISCOUNT') {
+      const discountValue = outcome.discountValues[0];
+      return `${discountValue?.currency || 'USD'} ${discountValue?.value || 0} off`;
+    }
+    return 'Discount available';
+  };
+
+  return (
+    <Card withBorder padding="md" radius="md">
+      <Stack gap="sm">
+        {/* Header */}
+        <Group justify="space-between" align="flex-start">
+          <div style={{ flex: 1 }}>
+            <Text fw={600} size="lg" mb="xs">
+              {discount.name}
+            </Text>
+            <Text size="sm" c="dimmed" mb="sm">
+              {discount.description}
+            </Text>
+          </div>
+          <Badge color={getStatusColor(discount.status)} size="md">
+            {discount.status}
+          </Badge>
+        </Group>
+
+        {/* Key Information */}
+        <Stack gap="xs">
+          <Group gap="xs">
+            <Text size="sm" fw={500}>Code:</Text>
+            <Code size="sm">{discount.code}</Code>
+            <CopyButton value={discount.code}>
+              {({ copied, copy }) => (
+                <ActionIcon size="sm" variant="subtle" onClick={copy}>
+                  {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                </ActionIcon>
+              )}
+            </CopyButton>
+          </Group>
+          <Group gap="xs">
+            <Text size="sm" fw={500}>ID:</Text>
+            <Code size="sm">{discount.id.slice(0, 8)}...</Code>
+            <CopyButton value={discount.id}>
+              {({ copied, copy }) => (
+                <ActionIcon size="sm" variant="subtle" onClick={copy}>
+                  {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                </ActionIcon>
+              )}
+            </CopyButton>
+          </Group>
+        </Stack>
+
+        {/* Date Range */}
+        <Group gap="xs">
+          <IconCalendar size={16} color="gray" />
+          <Text size="sm">
+            <Text component="span" fw={500}>Valid:</Text> {formatDate(discount.startDate)} - {formatDate(discount.endDate)}
+          </Text>
+        </Group>
+
+        {/* Discount Details */}
+        <Card withBorder padding="sm" bg="blue.0">
+          <Text size="sm" fw={500} mb="xs">Discount Details</Text>
+          <Stack gap="xs">
+            {discount.outcomes.map((outcome, index) => (
+              <div key={index}>
+                <Text size="sm" fw={500} c="blue">
+                  {outcome.type === 'FIXED_DISCOUNT' ? 'Fixed Amount' : 'Percentage'} Discount
+                </Text>
+                <Grid>
+                  {outcome.discountValues.map((value, valueIndex) => (
+                    <Grid.Col span={6} key={valueIndex}>
+                      <Text size="xs" c="dimmed">
+                        {value.country || 'Global'}: <Text component="span" fw={500}>
+                          {outcome.type === 'PERCENTAGE_DISCOUNT' 
+                            ? `${value.value}%` 
+                            : `${value.currency || 'USD'} ${value.value}`
+                          }
+                        </Text>
+                      </Text>
+                    </Grid.Col>
+                  ))}
+                </Grid>
+              </div>
+            ))}
+          </Stack>
+        </Card>
+
+        {/* Qualified Offers */}
+        <Card withBorder padding="sm" bg="green.0">
+          <Group justify="space-between" align="center" mb="xs">
+            <Text size="sm" fw={500}>
+              Qualified Offers ({discount.qualification.baseOfferIds.length})
+            </Text>
+            <ActionIcon 
+              size="sm" 
+              variant="subtle" 
+              onClick={() => setExpanded(!expanded)}
+            >
+              {expanded ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
+            </ActionIcon>
+          </Group>
+          
+          {!expanded ? (
+            <Text size="xs" c="dimmed">
+              {discount.qualification.baseOfferIds.slice(0, 3).join(', ')}
+              {discount.qualification.baseOfferIds.length > 3 && ` + ${discount.qualification.baseOfferIds.length - 3} more`}
+            </Text>
+          ) : (
+            <Grid>
+              {discount.qualification.baseOfferIds.map((offerId, index) => (
+                <Grid.Col span={6} key={index}>
+                  <Group gap="xs">
+                    <Code size="xs">{offerId}</Code>
+                    <CopyButton value={offerId}>
+                      {({ copied, copy }) => (
+                        <ActionIcon size="xs" variant="subtle" onClick={copy}>
+                          {copied ? <IconCheck size={10} /> : <IconCopy size={10} />}
+                        </ActionIcon>
+                      )}
+                    </CopyButton>
+                  </Group>
+                </Grid.Col>
+              ))}
+            </Grid>
+          )}
+        </Card>
+
+        {/* Action Buttons */}
+        <Group justify="space-between">
+          <Button 
+            size="sm" 
+            variant="light" 
+            leftSection={<IconExternalLink size={14} />}
+            onClick={() => onUseInOrder?.(discount)}
+            disabled={!onUseInOrder}
+          >
+            Use in Order
+          </Button>
+          <Group gap="xs">
+            <Button 
+              size="sm" 
+              variant="subtle"
+              onClick={() => setDetailsModalOpened(true)}
+            >
+              View Details
+            </Button>
+            <CopyButton value={JSON.stringify(discount, null, 2)}>
+              {({ copied, copy }) => (
+                <Button size="sm" variant="subtle" onClick={copy}>
+                  {copied ? 'Copied JSON' : 'Copy JSON'}
+                </Button>
+              )}
+            </CopyButton>
+          </Group>
+        </Group>
+
+        {/* Details Modal */}
+        <Modal
+          opened={detailsModalOpened}
+          onClose={() => setDetailsModalOpened(false)}
+          title="Discount Details"
+          size="lg"
+        >
+          <Stack gap="md">
+            <Group justify="space-between">
+              <Text fw={600} size="lg">{discount.name}</Text>
+              <Badge color={getStatusColor(discount.status)} size="lg">
+                {discount.status}
+              </Badge>
+            </Group>
+
+            <Text c="dimmed">{discount.description}</Text>
+
+            <Divider />
+
+            <Grid>
+              <Grid.Col span={6}>
+                <Stack gap="xs">
+                  <Text fw={500} size="sm">Discount Code</Text>
+                  <Group gap="xs">
+                    <Code>{discount.code}</Code>
+                    <CopyButton value={discount.code}>
+                      {({ copied, copy }) => (
+                        <ActionIcon size="sm" variant="subtle" onClick={copy}>
+                          {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                        </ActionIcon>
+                      )}
+                    </CopyButton>
+                  </Group>
+                </Stack>
+              </Grid.Col>
+              <Grid.Col span={6}>
+                <Stack gap="xs">
+                  <Text fw={500} size="sm">Discount ID</Text>
+                  <Group gap="xs">
+                    <Code>{discount.id}</Code>
+                    <CopyButton value={discount.id}>
+                      {({ copied, copy }) => (
+                        <ActionIcon size="sm" variant="subtle" onClick={copy}>
+                          {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                        </ActionIcon>
+                      )}
+                    </CopyButton>
+                  </Group>
+                </Stack>
+              </Grid.Col>
+            </Grid>
+
+            <Grid>
+              <Grid.Col span={6}>
+                <Stack gap="xs">
+                  <Text fw={500} size="sm">Start Date</Text>
+                  <Text size="sm">{formatDate(discount.startDate)}</Text>
+                </Stack>
+              </Grid.Col>
+              <Grid.Col span={6}>
+                <Stack gap="xs">
+                  <Text fw={500} size="sm">End Date</Text>
+                  <Text size="sm">{formatDate(discount.endDate)}</Text>
+                </Stack>
+              </Grid.Col>
+            </Grid>
+
+            <Divider />
+
+            <Stack gap="md">
+              <Text fw={500}>Discount Outcomes</Text>
+              {discount.outcomes.map((outcome, index) => (
+                <Card key={index} withBorder padding="sm">
+                  <Stack gap="xs">
+                    <Text fw={500} c="blue">
+                      {outcome.type === 'FIXED_DISCOUNT' ? 'Fixed Amount Discount' : 'Percentage Discount'}
+                    </Text>
+                    <Text size="sm" c="dimmed">Discount Values by Country:</Text>
+                    <Grid>
+                      {outcome.discountValues.map((value, valueIndex) => (
+                        <Grid.Col span={4} key={valueIndex}>
+                          <Card withBorder padding="xs" bg="gray.0">
+                            <Stack gap="xs">
+                              <Text size="xs" fw={500}>
+                                {value.country || 'Global'}
+                              </Text>
+                              <Text size="sm">
+                                {outcome.type === 'PERCENTAGE_DISCOUNT' 
+                                  ? `${value.value}% off` 
+                                  : `${value.currency || 'USD'} ${value.value} off`
+                                }
+                              </Text>
+                            </Stack>
+                          </Card>
+                        </Grid.Col>
+                      ))}
+                    </Grid>
+                  </Stack>
+                </Card>
+              ))}
+            </Stack>
+
+            <Divider />
+
+            <Stack gap="md">
+              <Text fw={500}>Qualified Offers ({discount.qualification.baseOfferIds.length})</Text>
+              <ScrollArea h={200}>
+                <Grid>
+                  {discount.qualification.baseOfferIds.map((offerId, index) => (
+                    <Grid.Col span={6} key={index}>
+                      <Group gap="xs">
+                        <Code size="sm">{offerId}</Code>
+                        <CopyButton value={offerId}>
+                          {({ copied, copy }) => (
+                            <ActionIcon size="xs" variant="subtle" onClick={copy}>
+                              {copied ? <IconCheck size={10} /> : <IconCopy size={10} />}
+                            </ActionIcon>
+                          )}
+                        </CopyButton>
+                      </Group>
+                    </Grid.Col>
+                  ))}
+                </Grid>
+              </ScrollArea>
+            </Stack>
+
+            <Divider />
+
+            <Stack gap="xs">
+              <Text fw={500} size="sm">Raw JSON Data</Text>
+              <ScrollArea h={200}>
+                <Code block>
+                  {JSON.stringify(discount, null, 2)}
+                </Code>
+              </ScrollArea>
+            </Stack>
+          </Stack>
+        </Modal>
+      </Stack>
+    </Card>
+  );
+};
+
 // Block 1: Get Flexible Discounts
 const GetFlexibleDiscountsBlock: React.FC<{
   expanded: boolean;
   onToggle: () => void;
-}> = ({ expanded, onToggle }) => {
+  onExpandBlock: (blockId: string) => void;
+}> = ({ expanded, onToggle, onExpandBlock }) => {
   const [loading, setLoading] = useState(false);
   const [discounts, setDiscounts] = useState<FlexibleDiscountsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -223,6 +604,13 @@ const GetFlexibleDiscountsBlock: React.FC<{
   const [limit, setLimit] = useState<number>(20);
 
   const fetchDiscounts = async () => {
+    // Check authentication before making API calls
+    const authStatus = adobeAuthService.getAuthStatus();
+    if (!authStatus.isAuthenticated) {
+      setError('Authentication required. Please connect your Adobe account first.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
@@ -325,7 +713,7 @@ const GetFlexibleDiscountsBlock: React.FC<{
         </ActionIcon>
       </Group>
 
-      <Collapse in={expanded}>
+      <Collapse in={expanded} transitionDuration={350} transitionTimingFunction="ease-in-out">
         <Stack gap="md">
           {/* Search Mode Selection */}
           <Group gap="md">
@@ -494,68 +882,34 @@ const GetFlexibleDiscountsBlock: React.FC<{
               {/* Discount Cards */}
               <Grid>
                 {discounts.flexDiscounts.map((discount) => (
-                  <Grid.Col key={discount.id} span={6}>
-                    <Card withBorder padding="md" radius="md">
-                      <Stack gap="sm">
-                        <Group justify="space-between">
-                          <Text fw={600} size="sm">
-                            {discount.name}
-                          </Text>
-                          <Badge
-                            size="sm"
-                            color={getStatusColor(discount.status)}
-                            variant="light"
-                          >
-                            {discount.status}
-                          </Badge>
-                        </Group>
-
-                        <Text size="xs" c="dimmed">
-                          {discount.description}
-                        </Text>
-
-                        <Group justify="space-between" align="center">
-                          <Group gap="xs">
-                            <Text size="xs" fw={500}>
-                              Code:
-                            </Text>
-                            <Code size="xs">{discount.code}</Code>
-                            <CopyButton value={discount.code}>
-                              {({ copied, copy }) => (
-                                <ActionIcon size="xs" variant="subtle" onClick={copy}>
-                                  {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
-                                </ActionIcon>
-                              )}
-                            </CopyButton>
-                          </Group>
-                          <Text size="xs" fw={500} c="blue">
-                            {formatDiscountValue(discount.outcomes[0])}
-                          </Text>
-                        </Group>
-
-                        <Group justify="space-between" align="center">
-                          <Text size="xs">
-                            {formatDate(discount.startDate)} - {formatDate(discount.endDate)}
-                          </Text>
-                          <Text size="xs" c="dimmed">
-                            {discount.qualification.baseOfferIds.length} offer(s)
-                          </Text>
-                        </Group>
-
-                        <Group justify="space-between" align="center">
-                          <CopyButton value={discount.id}>
-                            {({ copied, copy }) => (
-                              <Button size="xs" variant="subtle" onClick={copy}>
-                                {copied ? 'Copied ID' : 'Copy ID'}
-                              </Button>
-                            )}
-                          </CopyButton>
-                          <Button size="xs" variant="light">
-                            Use in Order
-                          </Button>
-                        </Group>
-                      </Stack>
-                    </Card>
+                  <Grid.Col span={6} key={discount.id}>
+                    <DiscountCard 
+                      discount={discount} 
+                      onUseInOrder={(discount) => {
+                        // Auto-expand Create Order block
+                        onExpandBlock('create-order');
+                        
+                        // Scroll to Create Order block after a brief delay
+                        setTimeout(() => {
+                          const createOrderElement = document.getElementById('create-order-block');
+                          if (createOrderElement) {
+                            createOrderElement.scrollIntoView({ 
+                              behavior: 'smooth', 
+                              block: 'start' 
+                            });
+                          }
+                        }, 100);
+                        
+                        // Trigger a custom event to populate the form
+                        window.dispatchEvent(new CustomEvent('useDiscountInOrder', {
+                          detail: {
+                            discountId: discount.id,
+                            discountCode: discount.code,
+                            qualifiedOfferIds: discount.qualification.baseOfferIds
+                          }
+                        }));
+                      }}
+                    />
                   </Grid.Col>
                 ))}
               </Grid>
@@ -604,6 +958,7 @@ const CreateOrderBlock: React.FC<{
   // Form state
   const [customerId, setCustomerId] = useState<string>('P1005230905');
   const [externalReferenceId, setExternalReferenceId] = useState<string>('');
+  const [currencyCode, setCurrencyCode] = useState<string>('USD');
   const [lineItems, setLineItems] = useState<Array<{
     extLineItemNumber: number;
     offerId: string;
@@ -637,12 +992,20 @@ const CreateOrderBlock: React.FC<{
   };
 
   const createOrPreviewOrder = async (preview: boolean = true) => {
+    // Check authentication before making API calls
+    const authStatus = adobeAuthService.getAuthStatus();
+    if (!authStatus.isAuthenticated) {
+      setError('Authentication required. Please connect your Adobe account first.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
     try {
       const orderPayload = {
         orderType: 'NEW',
+        currencyCode: currencyCode,
         externalReferenceId: externalReferenceId || `order-${Date.now()}`,
         lineItems: lineItems.map(item => ({
           extLineItemNumber: item.extLineItemNumber,
@@ -687,6 +1050,7 @@ const CreateOrderBlock: React.FC<{
   const resetForm = () => {
     setCustomerId('P1005230905');
     setExternalReferenceId('');
+    setCurrencyCode('USD');
     setLineItems([{
       extLineItemNumber: 1,
       offerId: '65322651CA01A12',
@@ -698,8 +1062,46 @@ const CreateOrderBlock: React.FC<{
     setPreviewMode(true);
   };
 
+  // Listen for discount usage events
+  useEffect(() => {
+    const handleUseDiscount = (event: CustomEvent) => {
+      const { discountId, discountCode, qualifiedOfferIds } = event.detail;
+      
+      // Find an empty line item or add a new one
+      const emptyLineItemIndex = lineItems.findIndex(item => !item.offerId);
+      const targetIndex = emptyLineItemIndex !== -1 ? emptyLineItemIndex : lineItems.length;
+      
+      if (targetIndex === lineItems.length) {
+        // Add new line item
+        setLineItems(prev => [...prev, {
+          extLineItemNumber: prev.length + 1,
+          offerId: qualifiedOfferIds[0] || '', // Use first qualified offer ID
+          quantity: 1,
+          flexDiscountId: discountId,
+          flexDiscountCode: discountCode,
+        }]);
+      } else {
+        // Update existing empty line item
+        const updated = [...lineItems];
+        updated[targetIndex] = {
+          ...updated[targetIndex],
+          offerId: qualifiedOfferIds[0] || '',
+          flexDiscountId: discountId,
+          flexDiscountCode: discountCode,
+        };
+        setLineItems(updated);
+      }
+    };
+
+    window.addEventListener('useDiscountInOrder', handleUseDiscount as EventListener);
+    
+    return () => {
+      window.removeEventListener('useDiscountInOrder', handleUseDiscount as EventListener);
+    };
+  }, [lineItems]);
+
   return (
-    <Card withBorder shadow="sm" radius="md">
+    <Card withBorder shadow="sm" radius="md" id="create-order-block">
       <Group justify="space-between" mb="md">
         <Group gap="xs">
           <IconShoppingCart size={20} color="green" />
@@ -715,11 +1117,11 @@ const CreateOrderBlock: React.FC<{
         </ActionIcon>
       </Group>
 
-      <Collapse in={expanded}>
+      <Collapse in={expanded} transitionDuration={350} transitionTimingFunction="ease-in-out">
         <Stack gap="md">
           {/* Order Form */}
           <Grid>
-            <Grid.Col span={6}>
+            <Grid.Col span={4}>
               <TextInput
                 label="Customer ID"
                 placeholder="Enter customer ID"
@@ -728,12 +1130,21 @@ const CreateOrderBlock: React.FC<{
                 required
               />
             </Grid.Col>
-            <Grid.Col span={6}>
+            <Grid.Col span={4}>
               <TextInput
                 label="External Reference ID"
                 placeholder="Optional external reference"
                 value={externalReferenceId}
                 onChange={(e) => setExternalReferenceId(e.target.value)}
+              />
+            </Grid.Col>
+            <Grid.Col span={4}>
+              <TextInput
+                label="Currency Code"
+                placeholder="e.g., USD, EUR, CAD"
+                value={currencyCode}
+                onChange={(e) => setCurrencyCode(e.target.value)}
+                required
               />
             </Grid.Col>
           </Grid>
@@ -1001,6 +1412,13 @@ const GetOrderBlock: React.FC<{
   const [orderId, setOrderId] = useState<string>('');
 
   const fetchOrder = async () => {
+    // Check authentication before making API calls
+    const authStatus = adobeAuthService.getAuthStatus();
+    if (!authStatus.isAuthenticated) {
+      setError('Authentication required. Please connect your Adobe account first.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
@@ -1066,7 +1484,7 @@ const GetOrderBlock: React.FC<{
         </ActionIcon>
       </Group>
 
-      <Collapse in={expanded}>
+      <Collapse in={expanded} transitionDuration={350} transitionTimingFunction="ease-in-out">
         <Stack gap="md">
           {/* Search Form */}
           <Grid>
@@ -1298,6 +1716,13 @@ const GetOrderHistoryBlock: React.FC<{
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
 
   const fetchOrderHistory = async () => {
+    // Check authentication before making API calls
+    const authStatus = adobeAuthService.getAuthStatus();
+    if (!authStatus.isAuthenticated) {
+      setError('Authentication required. Please connect your Adobe account first.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
@@ -1399,7 +1824,7 @@ const GetOrderHistoryBlock: React.FC<{
         </ActionIcon>
       </Group>
 
-      <Collapse in={expanded}>
+      <Collapse in={expanded} transitionDuration={350} transitionTimingFunction="ease-in-out">
         <Stack gap="md">
           {/* Search Form */}
           <Grid>

@@ -228,6 +228,11 @@ app.get('/api/adobe/proxy/v3/flex-discounts', async (req, res) => {
   }
 });
 
+// Helper function to generate correlation ID
+function generateCorrelationId() {
+  return 'req-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now();
+}
+
 // VIP API Proxy endpoint for creating orders
 app.post('/api/adobe/proxy/v3/customers/:customerId/orders', async (req, res) => {
   try {
@@ -238,9 +243,15 @@ app.post('/api/adobe/proxy/v3/customers/:customerId/orders', async (req, res) =>
     const tokenData = await getOAuthAccessToken(environment);
     
     const config = ADOBE_CONFIG[environment];
-    const apiUrl = `${config.endpoints.api}/v3/customers/${customerId}/orders`;
+    
+    // Handle preview mode
+    const isPreview = req.query.preview === 'true';
+    const apiUrl = `${config.endpoints.api}/v3/customers/${customerId}/orders${isPreview ? '?preview=true' : ''}`;
     
     console.log(`Proxying request to: ${apiUrl}`);
+    
+    // Generate correlation ID
+    const correlationId = generateCorrelationId();
     
     // Forward the request
     const response = await fetch(apiUrl, {
@@ -249,6 +260,7 @@ app.post('/api/adobe/proxy/v3/customers/:customerId/orders', async (req, res) =>
         'Authorization': `Bearer ${tokenData.accessToken}`,
         'Content-Type': 'application/json',
         'X-API-Key': config.credentials.clientId,
+        'X-Correlation-ID': correlationId,
       },
       body: JSON.stringify(orderData),
     });
@@ -283,6 +295,9 @@ app.get('/api/adobe/proxy/v3/customers/:customerId/orders/:orderId', async (req,
     
     console.log(`Proxying request to: ${apiUrl}`);
     
+    // Generate correlation ID
+    const correlationId = generateCorrelationId();
+    
     // Forward the request
     const response = await fetch(apiUrl, {
       method: 'GET',
@@ -290,6 +305,7 @@ app.get('/api/adobe/proxy/v3/customers/:customerId/orders/:orderId', async (req,
         'Authorization': `Bearer ${tokenData.accessToken}`,
         'Content-Type': 'application/json',
         'X-API-Key': config.credentials.clientId,
+        'X-Correlation-ID': correlationId,
       },
     });
     
@@ -326,6 +342,9 @@ app.get('/api/adobe/proxy/v3/customers/:customerId/orders', async (req, res) => 
     
     console.log(`Proxying request to: ${apiUrl}`);
     
+    // Generate correlation ID
+    const correlationId = generateCorrelationId();
+    
     // Forward the request
     const response = await fetch(apiUrl, {
       method: 'GET',
@@ -333,6 +352,7 @@ app.get('/api/adobe/proxy/v3/customers/:customerId/orders', async (req, res) => 
         'Authorization': `Bearer ${tokenData.accessToken}`,
         'Content-Type': 'application/json',
         'X-API-Key': config.credentials.clientId,
+        'X-Correlation-ID': correlationId,
       },
     });
     
