@@ -263,7 +263,7 @@ const Sidebar = () => {
         { icon: IconHome, label: 'Overview' },
         { icon: IconUsers, label: 'Users' },
         { icon: IconBuilding, label: 'Companies', active: true },
-        { icon: IconStar, label: 'Adobe Recommendations' },
+        { icon: IconStar, label: 'Adobe Product Recommendations' },
         { icon: IconBuilding, label: 'Pending Companies' },
         { icon: IconUser, label: 'Leads' },
         { icon: IconChartLine, label: 'Opportunities' },
@@ -378,8 +378,8 @@ const mockAdobeRecommendations: AdobeRecommendationsData = {
           rank: 0,
           product: {
             baseOfferId: "30006208CA01A12",
-            name: "Adobe Creative Cloud for Enterprise",
-            description: "Complete creative suite with advanced enterprise features"
+            name: "Adobe Creative Cloud for Teams",
+            description: "Complete creative suite with 20+ apps"
           },
           source: {
             sourceType: "OFFER",
@@ -391,7 +391,7 @@ const mockAdobeRecommendations: AdobeRecommendationsData = {
           product: {
             baseOfferId: "65304921CA01A12", 
             name: "Adobe Analytics Premium",
-            description: "Advanced analytics with AI-powered insights"
+            description: "Advanced web analytics and insights"
           },
           source: {
             sourceType: "OFFER",
@@ -404,8 +404,8 @@ const mockAdobeRecommendations: AdobeRecommendationsData = {
           rank: 0,
           product: {
             baseOfferId: "30006566CA14A12",
-            name: "Adobe Experience Manager",
-            description: "Content management for digital experiences"
+            name: "Adobe Acrobat Pro DC",
+            description: "Create, edit and sign PDFs"
           },
           source: {
             sourceType: "CUSTOMER",
@@ -416,8 +416,8 @@ const mockAdobeRecommendations: AdobeRecommendationsData = {
           rank: 1,
           product: {
             baseOfferId: "30005897CA01A12",
-            name: "Adobe Campaign",
-            description: "Cross-channel campaign management"
+            name: "Adobe Sign for Business",
+            description: "Electronic signatures and workflows"
           },
           source: {
             sourceType: "CUSTOMER", 
@@ -430,8 +430,20 @@ const mockAdobeRecommendations: AdobeRecommendationsData = {
           rank: 0,
           product: {
             baseOfferId: "30007123CA01A12",
-            name: "Adobe Stock Enterprise",
-            description: "Premium stock assets for enterprise use"
+            name: "Adobe Stock for Teams",
+            description: "Premium stock photos and assets"
+          },
+          source: {
+            sourceType: "OFFER",
+            offerIds: ["30006208CA01A12"]
+          }
+        },
+        {
+          rank: 1,
+          product: {
+            baseOfferId: "30007124CA01A12",
+            name: "Adobe Workfront Planning",
+            description: "Project management and collaboration"
           },
           source: {
             sourceType: "OFFER",
@@ -448,8 +460,20 @@ const mockAdobeRecommendations: AdobeRecommendationsData = {
           rank: 0,
           product: {
             baseOfferId: "30008456CA01A12",
-            name: "Adobe Creative Cloud Enterprise Plus",
-            description: "Enhanced version with additional storage and features"
+            name: "Adobe Experience Manager Sites",
+            description: "Content management and delivery"
+          },
+          source: {
+            sourceType: "SUBSCRIPTION",
+            offerIds: ["30006208CA01A12"]
+          }
+        },
+        {
+          rank: 1,
+          product: {
+            baseOfferId: "30008457CA01A12",
+            name: "Adobe Target Premium",
+            description: "AI-powered personalization and testing"
           },
           source: {
             sourceType: "SUBSCRIPTION",
@@ -462,8 +486,20 @@ const mockAdobeRecommendations: AdobeRecommendationsData = {
           rank: 0,
           product: {
             baseOfferId: "30009789CA01A12",
-            name: "Adobe Document Cloud for Business",
-            description: "Enhanced PDF workflows for teams"
+            name: "Adobe Campaign Standard",
+            description: "Cross-channel marketing automation"
+          },
+          source: {
+            sourceType: "SUBSCRIPTION",
+            offerIds: []
+          }
+        },
+        {
+          rank: 1,
+          product: {
+            baseOfferId: "30009790CA01A12",
+            name: "Adobe Audience Manager",
+            description: "Data management platform"
           },
           source: {
             sourceType: "SUBSCRIPTION",
@@ -476,8 +512,20 @@ const mockAdobeRecommendations: AdobeRecommendationsData = {
           rank: 0,
           product: {
             baseOfferId: "30010234CA01A12",
-            name: "Adobe Sign Premium",
-            description: "Advanced e-signature workflows"
+            name: "Adobe Commerce Cloud",
+            description: "Enterprise e-commerce platform"
+          },
+          source: {
+            sourceType: "SUBSCRIPTION",
+            offerIds: ["30006208CA01A12"]
+          }
+        },
+        {
+          rank: 1,
+          product: {
+            baseOfferId: "30010235CA01A12",
+            name: "Adobe Real-time CDP",
+            description: "Customer data platform"
           },
           source: {
             sourceType: "SUBSCRIPTION",
@@ -489,10 +537,31 @@ const mockAdobeRecommendations: AdobeRecommendationsData = {
   }
 };
 
+// Mock Products in Current Term products
+const currentContractProducts = [
+  {
+    baseOfferId: "30001234CA01A12",
+    name: "Adobe Photoshop for Teams",
+    description: "Photo editing for creative teams"
+  },
+  {
+    baseOfferId: "30001235CA01A12", 
+    name: "Adobe Illustrator for Teams",
+    description: "Vector graphics and illustration"
+  },
+  {
+    baseOfferId: "30001236CA01A12",
+    name: "Adobe InDesign for Teams", 
+    description: "Page layout and design"
+  }
+];
+
 const AdobeRecommendationSection = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<AdobeRecommendationsData | null>(null);
+  const [activeTab, setActiveTab] = useState<'generic' | 'renewal'>('generic');
+  const [isVisible, setIsVisible] = useState(false);
 
   const fetchRecommendations = async () => {
     setIsLoading(true);
@@ -504,6 +573,7 @@ const AdobeRecommendationSection = () => {
       
       // Mock the API response structure
       setRecommendations(mockAdobeRecommendations);
+      setIsVisible(true);
     } catch (error) {
       console.error('Error fetching recommendations:', error);
     } finally {
@@ -516,82 +586,167 @@ const AdobeRecommendationSection = () => {
     navigate(`/adobe-recommendations/product/${product.baseOfferId}`);
   };
 
-  const RecommendationCard = ({ recommendation, type }: { 
-    recommendation: AdobeRecommendation; 
-    type: 'upsells' | 'crossSells' | 'addOns';
-  }) => (
-    <Paper withBorder p="sm" style={{ marginBottom: '8px' }}>
-      <Stack gap="xs">
-        <Stack gap={2} style={{ flex: 1 }}>
-          <Text 
-            size="sm" 
-            fw={600} 
-            style={{ 
-              cursor: 'pointer',
-              color: '#0891b2',
-              transition: 'color 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#06749c';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = '#0891b2';
-            }}
-            onClick={() => handleProductClick(recommendation.product)}
-          >
-            {recommendation.product.name}
-          </Text>
-          <Text size="xs" c="dimmed">{recommendation.product.description}</Text>
-        </Stack>
-      </Stack>
-    </Paper>
-  );
+  const handleClose = () => {
+    setIsVisible(false);
+    setRecommendations(null);
+  };
 
-  const RecommendationSection = ({ title, data }: {
-    title: string;
-    data: RecommendationResponse;
-  }) => (
-    <Stack gap="md">
-      <Title order={5}>{title}</Title>
-      {data && (
-        <Stack gap="sm">
-          {data.productRecommendations.upsells?.length > 0 && (
-            <Stack gap="xs">
-              <Text size="sm" fw={500} c="black">Upsell Recommendations</Text>
-              {data.productRecommendations.upsells.map((rec, index) => (
-                <RecommendationCard key={index} recommendation={rec} type="upsells" />
-              ))}
-            </Stack>
-          )}
-          
-          {data.productRecommendations.crossSells?.length > 0 && (
-            <Stack gap="xs">
-              <Text size="sm" fw={500} c="black">Cross-sell Recommendations</Text>
-              {data.productRecommendations.crossSells.map((rec, index) => (
-                <RecommendationCard key={index} recommendation={rec} type="crossSells" />
-              ))}
-            </Stack>
-          )}
-          
-          {data.productRecommendations.addOns?.length > 0 && (
-            <Stack gap="xs">
-              <Text size="sm" fw={500} c="black">Add-on Recommendations</Text>
-              {data.productRecommendations.addOns.map((rec, index) => (
-                <RecommendationCard key={index} recommendation={rec} type="addOns" />
-              ))}
-            </Stack>
-          )}
-        </Stack>
-      )}
-    </Stack>
-  );
+  // Product logo mapping
+  const getProductLogo = (productName: string) => {
+    const logoMap: Record<string, { initials: string; color: string; fontSize?: string }> = {
+      'Adobe Creative Cloud for Teams': { initials: 'Cc', color: '#FF6B35', fontSize: 'md' },
+      'Adobe Analytics Premium': { initials: 'An', color: '#FF4081', fontSize: 'md' },
+      'Adobe Acrobat Pro DC': { initials: 'Ac', color: '#DC143C', fontSize: 'md' },
+      'Adobe Sign for Business': { initials: 'Si', color: '#0066CC', fontSize: 'md' },
+      'Adobe Stock for Teams': { initials: 'St', color: '#00A4E4', fontSize: 'md' },
+      'Adobe Workfront Planning': { initials: 'Wf', color: '#8E4EC6', fontSize: 'xs' },
+      'Adobe Experience Manager Sites': { initials: 'Em', color: '#FF9500', fontSize: 'xs' },
+      'Adobe Target Premium': { initials: 'Tg', color: '#9C27B0', fontSize: 'md' },
+      'Adobe Campaign Standard': { initials: 'Cp', color: '#4CAF50', fontSize: 'md' },
+      'Adobe Audience Manager': { initials: 'Am', color: '#FF5722', fontSize: 'xs' },
+      'Adobe Commerce Cloud': { initials: 'Co', color: '#607D8B', fontSize: 'md' },
+      'Adobe Real-time CDP': { initials: 'Rt', color: '#3F51B5', fontSize: 'md' },
+      // Products in Current Term products
+      'Adobe Photoshop for Teams': { initials: 'Ps', color: '#31C5F0', fontSize: 'md' },
+      'Adobe Illustrator for Teams': { initials: 'Ai', color: '#FF9A00', fontSize: 'md' },
+      'Adobe InDesign for Teams': { initials: 'Id', color: '#FD006E', fontSize: 'md' }
+    };
+
+    return logoMap[productName] || { initials: 'A', color: '#dc2626', fontSize: 'lg' };
+  };
+
+  const ContractProductCard = ({ product }: { 
+    product: { baseOfferId: string; name: string; description: string; }; 
+  }) => {
+    const logo = getProductLogo(product.name);
+    
+    return (
+      <Paper 
+        withBorder 
+        p="sm" 
+        style={{ 
+          marginBottom: '4px',
+          cursor: 'pointer',
+          transition: 'background-color 0.2s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = '#f9fafb';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'white';
+        }}
+        onClick={() => navigate(`/adobe-recommendations/product/${product.baseOfferId}`)}
+      >
+        <Group gap="sm" align="flex-start">
+          <Box
+            style={{
+              width: 48,
+              height: 48,
+              backgroundColor: logo.color,
+              borderRadius: 6,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              border: '1px solid rgba(255,255,255,0.2)'
+            }}
+          >
+            <Text c="white" fw={700} size={logo.fontSize} style={{ letterSpacing: '0.5px' }}>
+              {logo.initials}
+            </Text>
+          </Box>
+          <Stack gap={2} style={{ flex: 1 }}>
+            <Text 
+              size="sm" 
+              fw={600} 
+              style={{ 
+                color: '#374151',
+                lineHeight: 1.4
+              }}
+            >
+              {product.name}
+            </Text>
+            <Text size="sm" c="dimmed" style={{ lineHeight: 1.4 }}>
+              {product.description}
+            </Text>
+          </Stack>
+        </Group>
+      </Paper>
+    );
+  };
+
+  const RecommendationCard = ({ recommendation }: { 
+    recommendation: AdobeRecommendation; 
+  }) => {
+    const logo = getProductLogo(recommendation.product.name);
+    
+    return (
+      <Paper 
+        withBorder 
+        p="sm" 
+        style={{ 
+          marginBottom: '4px',
+          cursor: 'pointer',
+          transition: 'background-color 0.2s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = '#f9fafb';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'white';
+        }}
+        onClick={() => handleProductClick(recommendation.product)}
+      >
+        <Group gap="sm" align="flex-start">
+          <Box
+            style={{
+              width: 48,
+              height: 48,
+              backgroundColor: logo.color,
+              borderRadius: 6,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              border: '1px solid rgba(255,255,255,0.2)'
+            }}
+          >
+            <Text c="white" fw={700} size={logo.fontSize} style={{ letterSpacing: '0.5px' }}>
+              {logo.initials}
+            </Text>
+          </Box>
+          <Stack gap={2} style={{ flex: 1 }}>
+            <Text 
+              size="sm" 
+              fw={600} 
+              style={{ 
+                color: '#374151',
+                lineHeight: 1.4
+              }}
+            >
+              {recommendation.product.name}
+            </Text>
+            <Text size="sm" c="dimmed" style={{ lineHeight: 1.4 }}>
+              {recommendation.product.description}
+            </Text>
+          </Stack>
+        </Group>
+      </Paper>
+    );
+  };
+
+  const currentData = recommendations && activeTab === 'generic' 
+    ? recommendations.generic 
+    : recommendations?.renewal;
 
   return (
-    <Paper withBorder p="md">
-      <Stack gap="md">
-        {!recommendations ? (
-          <Stack gap="md" style={{ textAlign: 'center' }} align="center">
-            <Title order={4}>Adobe Recommendations</Title>
+    <Stack gap="md">
+      <Title order={4}>Adobe Product Recommendations</Title>
+      
+      {!isVisible ? (
+        <Paper withBorder p="md" style={{ textAlign: 'center' }}>
+          <Stack gap="md" align="center">
+            <Title order={4}>Adobe Product Recommendations</Title>
             <Anchor size="sm" c="blue">Find out more</Anchor>
             <Button 
               variant="outline" 
@@ -600,38 +755,121 @@ const AdobeRecommendationSection = () => {
               onClick={fetchRecommendations}
               style={{ width: 'auto' }}
             >
-              Get Recommendations
+              List Recommendations
             </Button>
           </Stack>
-        ) : (
-          <Stack gap="lg">
-            <Group justify="space-between" align="center">
-              <Title order={4}>Adobe Recommendations</Title>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                loading={isLoading}
-                onClick={fetchRecommendations}
-                style={{ width: 'auto' }}
+        </Paper>
+      ) : (
+        <Box>
+          {/* Tabs */}
+          <Group gap={0} mb={0}>
+            <Button
+              variant="subtle"
+              color={activeTab === 'generic' ? 'blue' : 'gray'}
+              onClick={() => setActiveTab('generic')}
+              style={{
+                backgroundColor: 'transparent',
+                color: activeTab === 'generic' ? '#0891b2' : '#6b7280',
+                borderBottom: activeTab === 'generic' ? '2px solid #0891b2' : 'none',
+                borderRadius: 0,
+                fontWeight: activeTab === 'generic' ? 600 : 400,
+                padding: '8px 16px'
+              }}
+            >
+              Generic
+            </Button>
+            <Button
+              variant="subtle"
+              color={activeTab === 'renewal' ? 'blue' : 'gray'}
+              onClick={() => setActiveTab('renewal')}
+              style={{
+                backgroundColor: 'transparent',
+                color: activeTab === 'renewal' ? '#0891b2' : '#6b7280',
+                borderBottom: activeTab === 'renewal' ? '2px solid #0891b2' : 'none',
+                borderRadius: 0,
+                fontWeight: activeTab === 'renewal' ? 600 : 400,
+                padding: '8px 16px'
+              }}
+            >
+              Renewal
+            </Button>
+            <Group ml="auto">
+              <ActionIcon 
+                variant="subtle" 
+                color="gray" 
+                size="sm"
+                onClick={handleClose}
               >
-                Refresh
-              </Button>
+                <Text style={{ fontSize: '14px', color: '#6b7280', cursor: 'pointer' }}>✕</Text>
+              </ActionIcon>
             </Group>
-            
-            <SimpleGrid cols={2} spacing="lg">
-              <RecommendationSection 
-                title="Generic Recommendations" 
-                data={recommendations.generic} 
-              />
-              <RecommendationSection 
-                title="Renewal Recommendations" 
-                data={recommendations.renewal} 
-              />
-            </SimpleGrid>
-          </Stack>
-        )}
-      </Stack>
-    </Paper>
+          </Group>
+
+          {/* Content with border starting from tabs */}
+          <Paper withBorder style={{ backgroundColor: 'white', borderTop: 'none' }}>
+            <Box p="md">
+              {currentData && (
+                <Stack gap="md">
+                  {/* Upsell */}
+                  {currentData.productRecommendations.upsells?.length > 0 && (
+                    <Stack gap="xs">
+                      <Title order={5} style={{ color: '#374151', fontSize: '16px', fontWeight: 600 }}>
+                        Upsell Recommendations
+                      </Title>
+                      {activeTab === 'renewal' 
+                        ? <RecommendationCard recommendation={currentData.productRecommendations.upsells[0]} />
+                        : currentData.productRecommendations.upsells.map((rec, index) => (
+                            <RecommendationCard key={index} recommendation={rec} />
+                          ))
+                      }
+                    </Stack>
+                  )}
+                  
+                  {/* Cross-sell */}
+                  {currentData.productRecommendations.crossSells?.length > 0 && (
+                    <Stack gap="xs">
+                      <Title order={5} style={{ color: '#374151', fontSize: '16px', fontWeight: 600 }}>
+                        Cross-sell Recommendations
+                      </Title>
+                      {activeTab === 'renewal' 
+                        ? <RecommendationCard recommendation={currentData.productRecommendations.crossSells[0]} />
+                        : currentData.productRecommendations.crossSells.map((rec, index) => (
+                            <RecommendationCard key={index} recommendation={rec} />
+                          ))
+                      }
+                    </Stack>
+                  )}
+
+                  {/* Products in Current Term Products - Only show for Renewal tab */}
+                  {activeTab === 'renewal' && (
+                    <Stack gap="xs">
+                      <Title order={5} style={{ color: '#374151', fontSize: '16px', fontWeight: 600 }}>
+                        Products in Current Term
+                      </Title>
+                      {currentContractProducts.map((product, index) => (
+                        <ContractProductCard key={index} product={product} />
+                      ))}
+                    </Stack>
+                  )}
+                  
+                  {/* Add-on - Only show for Generic tab */}
+                  {activeTab === 'generic' && currentData.productRecommendations.addOns?.length > 0 && (
+                    <Stack gap="xs">
+                      <Title order={5} style={{ color: '#374151', fontSize: '16px', fontWeight: 600 }}>
+                        Add-on Recommendations
+                      </Title>
+                      {currentData.productRecommendations.addOns.map((rec, index) => (
+                        <RecommendationCard key={index} recommendation={rec} />
+                      ))}
+                    </Stack>
+                  )}
+                </Stack>
+              )}
+            </Box>
+          </Paper>
+        </Box>
+      )}
+    </Stack>
   );
 };
 

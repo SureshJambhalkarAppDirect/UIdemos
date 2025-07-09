@@ -424,25 +424,112 @@ const getValidMetricsForEntity = (entity: string): string[] => {
   return entityMetrics[entity] || [];
 };
 
-// Pattern matching fallback (your existing sophisticated system)
+// Pattern matching fallback - complete context-aware version from main component
 const processWithPatternMatching = (
   query: string, 
   lastContext?: { entity: string; metric: string; title: string } | null
 ): AnalyticsQuery => {
-  // Your existing processNaturalLanguageQuery logic here
-  // I'll import this from the existing component
   const lowerQuery = query.toLowerCase();
   
-  // Simplified version - you can copy your full pattern matching logic here
-  const patterns = [
-    { pattern: /commission tickets by provider/i, entity: 'provider_sales', metric: 'commission_tickets_by_provider', confidence: 0.95 },
-    { pattern: /new users/i, entity: 'users', metric: 'new_users', confidence: 0.9 },
-    { pattern: /new companies/i, entity: 'companies', metric: 'new_companies', confidence: 0.9 },
-    // Add more patterns as needed
+  // Check for visualization-only requests first (context-dependent)
+  const visualizationOnlyPatterns = [
+    /^make it a? (line|bar|insight)/i,
+    /^change to (line|bar|insight)/i,
+    /^show as (line|bar|insight)/i,
+    /^i want a? (line|bar|insight)/i,
+    /^(line|bar|insight) chart$/i,
+    /^make this a? (line|bar|insight)/i,
+    /^convert to (line|bar|insight)/i,
+    /^give me a? (line|bar|insight)/i,
+    /^create a? (line|bar|insight)/i
   ];
 
-  type PatternMatch = { pattern: RegExp; entity: string; metric: string; confidence: number };
-  let bestMatch: PatternMatch | null = null;
+  // Extract visualization from context request
+  let contextVisualization: string | null = null;
+  for (const pattern of visualizationOnlyPatterns) {
+    const match = query.match(pattern);
+    if (match) {
+      const vizType = match[1]?.toLowerCase();
+      if (vizType === 'line') contextVisualization = 'line';
+      else if (vizType === 'bar') contextVisualization = 'bar';
+      else if (vizType === 'insight') contextVisualization = 'insight';
+      break;
+    }
+  }
+
+  // If this is a visualization-only request and we have context
+  if (contextVisualization && lastContext) {
+    return {
+      intent: 'change_visualization',
+      entity: lastContext.entity,
+      metric: lastContext.metric,
+      visualization: contextVisualization,
+      timeframe: 'last_12_months',
+      confidence: 0.95,
+      isValidCombination: true,
+      suggestions: null,
+      isContextual: true
+    };
+  }
+
+  // If visualization-only request but no context
+  if (contextVisualization && !lastContext) {
+    return {
+      intent: 'need_context',
+      entity: null,
+      metric: null,
+      visualization: contextVisualization,
+      timeframe: 'last_12_months',
+      confidence: 0.3,
+      isValidCombination: false,
+      suggestions: ["I'd like to help you create a " + contextVisualization + " chart! What data would you like to visualize? Try asking something like 'Show me commission tickets by provider as a " + contextVisualization + " chart'"],
+      isContextual: false
+    };
+  }
+  
+  // Direct pattern matching for supported combinations (most specific patterns first!)
+  const patterns = [
+    // Provider Sales entity - specific patterns first
+    { pattern: /commission tickets by provider/i, entity: 'provider_sales', metric: 'commission_tickets_by_provider', confidence: 0.95 },
+    { pattern: /commission tickets by status/i, entity: 'provider_sales', metric: 'commission_tickets_by_status', confidence: 0.95 },
+    { pattern: /commission tickets by age/i, entity: 'provider_sales', metric: 'commission_tickets_by_age', confidence: 0.95 },
+    { pattern: /commission tickets open v?s? resolved/i, entity: 'provider_sales', metric: 'commission_tickets_open_vs_resolved', confidence: 0.95 },
+    { pattern: /commissions by provider/i, entity: 'provider_sales', metric: 'commissions_by_provider', confidence: 0.95 },
+    { pattern: /booked order amount by product category/i, entity: 'provider_sales', metric: 'booked_order_amount_by_product_category', confidence: 0.95 },
+    { pattern: /booked order amount by provider/i, entity: 'provider_sales', metric: 'booked_order_amount_by_provider', confidence: 0.95 },
+    { pattern: /booked order amount/i, entity: 'provider_sales', metric: 'booked_order_amount', confidence: 0.9 },
+    { pattern: /quotes created/i, entity: 'provider_sales', metric: 'quotes_created', confidence: 0.9 },
+    { pattern: /net billed/i, entity: 'provider_sales', metric: 'net_billed', confidence: 0.9 },
+    { pattern: /commission tickets/i, entity: 'provider_sales', metric: 'commission_tickets', confidence: 0.8 },
+    { pattern: /booked orders?/i, entity: 'provider_sales', metric: 'booked_orders', confidence: 0.8 },
+    
+    // Opportunities entity - specific patterns first
+    { pattern: /opportunities by status/i, entity: 'opportunities', metric: 'opportunities_by_status', confidence: 0.95 },
+    { pattern: /pending approval opportunities by age/i, entity: 'opportunities', metric: 'pending_approval_opportunities_by_age', confidence: 0.95 },
+    { pattern: /total opportunities/i, entity: 'opportunities', metric: 'total_opportunities', confidence: 0.9 },
+    { pattern: /new opportunities/i, entity: 'opportunities', metric: 'new_opportunities', confidence: 0.9 },
+    { pattern: /sales velocity/i, entity: 'opportunities', metric: 'sales_velocity', confidence: 0.9 },
+    { pattern: /opportunities/i, entity: 'opportunities', metric: 'new_opportunities', confidence: 0.7 },
+    
+    // Users entity - specific patterns first
+    { pattern: /new users?/i, entity: 'users', metric: 'new_users', confidence: 0.9 },
+    { pattern: /users?/i, entity: 'users', metric: 'new_users', confidence: 0.7 },
+    
+    // Companies entity - specific patterns first
+    { pattern: /new compan(y|ies)/i, entity: 'companies', metric: 'new_companies', confidence: 0.9 },
+    { pattern: /compan(y|ies)/i, entity: 'companies', metric: 'new_companies', confidence: 0.7 },
+    
+    // Orders entity
+    { pattern: /new subscriptions?/i, entity: 'orders', metric: 'new_subscriptions', confidence: 0.9 },
+    { pattern: /orders?/i, entity: 'orders', metric: 'new_subscriptions', confidence: 0.7 },
+    
+    // Invoices entity
+    { pattern: /invoiced amount/i, entity: 'invoices', metric: 'invoiced_amount', confidence: 0.9 },
+    { pattern: /invoice/i, entity: 'invoices', metric: 'invoiced_amount', confidence: 0.7 }
+  ];
+
+  // Find best matching pattern
+  let bestMatch: { pattern: RegExp; entity: string; metric: string; confidence: number } | null = null;
   let bestConfidence = 0;
   
   for (const pattern of patterns) {
@@ -455,25 +542,44 @@ const processWithPatternMatching = (
   }
 
   // Detect visualization preference
-  let visualization = 'bar';
-  if (/line|trend|over time/i.test(query)) visualization = 'line';
-  else if (/insight|metric|number/i.test(query)) visualization = 'insight';
+  let visualization = 'bar'; // default
+  if (/line|trend|over time|timeline/i.test(query)) {
+      visualization = 'line';
+  } else if (/insight|metric|number|kpi|summary|total/i.test(query)) {
+    visualization = 'insight';
+  } else if (/bar|column|chart|graph/i.test(query)) {
+    visualization = 'bar';
+  }
 
+  // Determine intent
+  let intent = 'show_chart';
+  if (/compare|comparison/i.test(query)) {
+      intent = 'compare';
+      visualization = 'bar';
+  } else if (/trend|over time/i.test(query)) {
+    intent = 'show_trend';
+    visualization = 'line';
+  } else if (/insight|summary/i.test(query)) {
+    intent = 'show_insight';
+    visualization = 'insight';
+  }
+  
   if (bestMatch) {
     return {
-      intent: 'show_chart',
+      intent,
       entity: bestMatch.entity,
       metric: bestMatch.metric,
       visualization,
       timeframe: 'last_12_months',
-      confidence: bestConfidence,
+      confidence: Math.min(bestMatch.confidence, 0.95),
       isValidCombination: true,
       suggestions: null,
       isContextual: false
     };
   }
 
-  // Fallback
+  // Fallback to enhanced suggestions if no patterns match
+  const enhanced = generateContextualSuggestions(query, null, null, 0.2);
   return {
     intent: 'unknown',
     entity: null,
@@ -482,7 +588,7 @@ const processWithPatternMatching = (
     timeframe: 'last_12_months',
     confidence: 0.2,
     isValidCombination: false,
-    suggestions: ["Try asking for 'new companies as a bar chart' or 'commission tickets by provider'"],
+    suggestions: enhanced.suggestions,
     isContextual: false
   };
 };
