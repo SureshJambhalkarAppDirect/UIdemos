@@ -6,6 +6,7 @@ import CompanyFlow from './CompanyFlow';
 import AdobeSyncUIFlow from './AdobeSyncUIFlow';
 import AppInsightsAIFlow from './AppInsightsAIFlow';
 import AdobeRecommendationsFlow from './AdobeRecommendationsFlow';
+import AdobeNewFunctionalitiesFlow from './AdobeNewFunctionalitiesFlow';
 import AdminFlow from './AdminFlow';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
         <Route path="/adobesyncui/*" element={<AdobeSyncUIFlow />} />
         <Route path="/appinsights-ai/*" element={<AppInsightsAIFlow />} />
         <Route path="/adobe-recommendations/*" element={<AdobeRecommendationsFlow />} />
+        <Route path="/adobe-new-functionalities/*" element={<AdobeNewFunctionalitiesFlow />} />
         <Route path="/admin/*" element={<AdminFlow />} />
       </Routes>
     </Router>

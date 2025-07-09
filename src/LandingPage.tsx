@@ -30,6 +30,11 @@ const LandingPage: React.FC = () => {
       id: 'adobesyncui',
       demo: 'AC-14309: Adobe Sync UI',
       color: '#9333ea' // Purple - complementary to the existing colors
+    },
+    {
+      id: 'adobe-new-functionalities',
+      demo: 'Adobe New Functionalities Tester',
+      color: '#22c55e' // Success green from design system
     }
   ];
 
