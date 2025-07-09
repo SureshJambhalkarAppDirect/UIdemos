@@ -372,6 +372,81 @@ app.get('/api/adobe/proxy/v3/customers/:customerId/orders', async (req, res) => 
   }
 });
 
+// VIP API Proxy endpoint for price lists
+app.post('/api/adobe/proxy/v3/pricelist', async (req, res) => {
+  try {
+    const { environment = 'sandbox', limit, offset, ...priceListData } = req.body;
+    
+    console.log(`Price Lists endpoint called with environment: ${environment}`);
+    console.log('Request data:', JSON.stringify(priceListData, null, 2));
+    
+    // Get access token
+    const tokenData = await getOAuthAccessToken(environment);
+    
+    const config = ADOBE_CONFIG[environment];
+    
+    // Build query string for pagination
+    const queryParams = new URLSearchParams();
+    if (limit) queryParams.append('limit', limit.toString());
+    if (offset) queryParams.append('offset', offset.toString());
+    
+    const queryString = queryParams.toString();
+    const apiUrl = `${config.endpoints.api}/v3/pricelist${queryString ? `?${queryString}` : ''}`;
+    
+    console.log(`Proxying request to: ${apiUrl}`);
+    
+    // Generate correlation ID and request ID
+    const correlationId = generateCorrelationId();
+    const requestId = generateCorrelationId(); // Use same function for request ID
+    
+    // Prepare request body according to Adobe API documentation
+    const requestBody = {
+      region: priceListData.region || 'NA',
+      marketSegment: priceListData.marketSegment || 'COM',
+      priceListType: priceListData.priceListType || 'STANDARD',
+      currency: priceListData.currency || 'USD',
+      priceListMonth: priceListData.priceListMonth || '202501',
+      filters: priceListData.filters || {},
+      includeOfferAttributes: priceListData.includeOfferAttributes || [
+        'productType',
+        'productTypeDetail',
+        'language'
+      ]
+    };
+    
+    console.log('Sending request body:', JSON.stringify(requestBody, null, 2));
+    
+    // Forward the request to Adobe API
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${tokenData.accessToken}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-API-Key': config.credentials.clientId,
+        'X-Correlation-ID': correlationId,
+        'X-Request-Id': requestId,
+      },
+      body: JSON.stringify(requestBody),
+    });
+    
+    const responseData = await response.json();
+    
+    if (!response.ok) {
+      console.error(`Adobe API Error: ${response.status} - ${JSON.stringify(responseData)}`);
+      return res.status(response.status).json(responseData);
+    }
+    
+    console.log('Price lists response received successfully');
+    res.json(responseData);
+  } catch (error) {
+    console.error('Price Lists Proxy Error:', error);
+    res.status(500).json({
+      error: error.message
+    });
+  }
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Adobe VIP Marketplace API Proxy Server running on port ${PORT}`);
@@ -383,4 +458,5 @@ app.listen(PORT, () => {
   console.log(`Create order endpoint: http://localhost:${PORT}/api/adobe/proxy/v3/customers/:customerId/orders`);
   console.log(`Get order endpoint: http://localhost:${PORT}/api/adobe/proxy/v3/customers/:customerId/orders/:orderId`);
   console.log(`Order history endpoint: http://localhost:${PORT}/api/adobe/proxy/v3/customers/:customerId/orders`);
+  console.log(`Price lists endpoint: http://localhost:${PORT}/api/adobe/proxy/v3/pricelist`);
 }); 

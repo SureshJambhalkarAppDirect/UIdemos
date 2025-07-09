@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { IconArrowLeft } from '@tabler/icons-react';
 import { AdobeAuthPanel } from './components/AdobeAuthPanel';
 import { FlexibleDiscounts } from './components/FlexibleDiscounts';
+import { PriceLists } from './components/PriceLists';
 import { AuthenticationStatus } from './services/adobeAuth';
 
 const AdobeNewFunctionalitiesFlow: React.FC = () => {
@@ -19,7 +20,8 @@ const AdobeNewFunctionalitiesFlow: React.FC = () => {
 const AdobeNewFunctionalitiesHome: React.FC = () => {
   const navigate = useNavigate();
   const [authStatus, setAuthStatus] = useState<AuthenticationStatus>({ isAuthenticated: false, status: 'disconnected' });
-  const [flexDiscountsExpanded, setFlexDiscountsExpanded] = useState(true);
+  const [flexDiscountsExpanded, setFlexDiscountsExpanded] = useState(false);
+  const [priceListsExpanded, setPriceListsExpanded] = useState(false);
 
   const handleAuthStatusChange = (status: AuthenticationStatus) => {
     setAuthStatus(status);
@@ -57,13 +59,26 @@ const AdobeNewFunctionalitiesHome: React.FC = () => {
           {/* Compact Authentication Panel */}
           <AdobeAuthPanel onAuthStatusChange={handleAuthStatusChange} />
 
-          {/* Flexible Discounts Management */}
-          <ScrollArea>
-            <FlexibleDiscounts 
-              expanded={flexDiscountsExpanded}
-              onToggle={() => setFlexDiscountsExpanded(!flexDiscountsExpanded)}
-            />
-          </ScrollArea>
+          {/* Show sections only when authenticated */}
+          {authStatus.isAuthenticated && (
+            <>
+              {/* Flexible Discounts Management */}
+              <ScrollArea>
+                <FlexibleDiscounts 
+                  expanded={flexDiscountsExpanded}
+                  onToggle={() => setFlexDiscountsExpanded(!flexDiscountsExpanded)}
+                />
+              </ScrollArea>
+
+              {/* Price Lists Management */}
+              <ScrollArea>
+                <PriceLists 
+                  expanded={priceListsExpanded}
+                  onToggle={() => setPriceListsExpanded(!priceListsExpanded)}
+                />
+              </ScrollArea>
+            </>
+          )}
         </Stack>
       </Container>
     </Box>

@@ -30,15 +30,21 @@ export const AdobeAuthPanel: React.FC<AdobeAuthPanelProps> = ({ onAuthStatusChan
   const [tokensExpanded, setTokensExpanded] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [panelExpanded, setPanelExpanded] = useState(true);
 
   useEffect(() => {
     const unsubscribe = adobeAuthService.onStatusChange((status) => {
       setAuthStatus(status);
       onAuthStatusChange?.(status);
+      
+      // Auto-collapse when successfully connected
+      if (status.status === 'connected' && panelExpanded) {
+        setTimeout(() => setPanelExpanded(false), 1000);
+      }
     });
 
     return unsubscribe;
-  }, [onAuthStatusChange]);
+  }, [onAuthStatusChange, panelExpanded]);
 
   const handleEnvironmentChange = (checked: boolean) => {
     const newEnv: AdobeEnvironment = checked ? 'production' : 'sandbox';
@@ -181,8 +187,20 @@ export const AdobeAuthPanel: React.FC<AdobeAuthPanelProps> = ({ onAuthStatusChan
                 <IconRefresh size={14} />
               </ActionIcon>
             </Tooltip>
+            <Tooltip label={panelExpanded ? "Collapse" : "Expand"}>
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                onClick={() => setPanelExpanded(!panelExpanded)}
+              >
+                {panelExpanded ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
+              </ActionIcon>
+            </Tooltip>
           </Group>
         </Group>
+
+        <Collapse in={panelExpanded}>
 
         {/* Error Display */}
         {authStatus.error && (
@@ -275,6 +293,7 @@ export const AdobeAuthPanel: React.FC<AdobeAuthPanelProps> = ({ onAuthStatusChan
             Some credentials are missing for the {environment} environment. Please check your configuration.
           </Alert>
         )}
+        </Collapse>
       </Stack>
     </Card>
   );

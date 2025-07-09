@@ -7,7 +7,8 @@ const DEFAULT_NAPKINS = [
   { id: 'appinsights-ai', name: 'AppInsights AI', enabled: true },
   { id: 'adobe-recommendations', name: 'Adobe Recommendations', enabled: true },
   { id: 'company-flow', name: 'Company Flow: Adobe Vendor Setup', enabled: true },
-  { id: 'adobesyncui', name: 'AC-14309: Adobe Sync UI', enabled: true }
+  { id: 'adobesyncui', name: 'AC-14309: Adobe Sync UI', enabled: true },
+  { id: 'adobe-new-functionalities', name: 'Adobe New Functionalities Tester', enabled: true }
 ];
 
 const AdminLogin = () => {
