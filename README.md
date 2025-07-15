@@ -27,6 +27,9 @@ npm install
 
 ### 3. Running the Application
 
+The application automatically detects the environment and switches between two authentication modes:
+
+#### Development Mode (Local)
 1. Start the proxy server:
    ```bash
    node proxy-server.js
@@ -38,6 +41,15 @@ npm install
    ```
 
 3. Open your browser to the URL shown in the terminal (typically `http://localhost:5179`)
+
+- Requires the proxy server for real Adobe API authentication
+- Provides real Adobe VIP Marketplace API connectivity
+
+#### Production Mode (Vercel/Online)
+1. Deploy to Vercel or access the live site
+2. No proxy server required
+3. Authentication and API calls use realistic mock data
+4. Perfect for UI demonstrations and testing without Adobe credentials
 
 ## Security Notes
 

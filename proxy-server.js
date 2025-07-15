@@ -447,6 +447,122 @@ app.post('/api/adobe/proxy/v3/pricelist', async (req, res) => {
   }
 });
 
+// Adobe Recommendations API Proxy endpoints
+
+// Fetch Recommendations
+app.post('/api/adobe/proxy/v3/recommendations', async (req, res) => {
+  try {
+    const { environment = 'sandbox', customerId, country, language, recommendationContext, offers } = req.body;
+    
+    // Get access token
+    const tokenData = await getOAuthAccessToken(environment);
+    
+    const config = ADOBE_CONFIG[environment];
+    
+    // Build query parameters based on the request
+    const queryParams = new URLSearchParams({
+      'customer-id': customerId,
+      'country': country,
+      'language': language,
+      'recommendation-context': recommendationContext
+    });
+    
+    const apiUrl = `${config.endpoints.api}/v3/customers/${customerId}/recommendations?${queryParams.toString().replace('customer-id=' + customerId + '&', '')}`;
+    
+    console.log(`Proxying recommendations request to: ${apiUrl}`);
+    
+    // Generate correlation ID
+    const correlationId = generateCorrelationId();
+    
+    // Prepare request body for Adobe API
+    const requestBody = {
+      recommendationContext,
+      customerId,
+      country,
+      language
+    };
+    
+    // Add offers if provided
+    if (offers && offers.length > 0) {
+      requestBody.offers = offers;
+    }
+
+    // Forward the request (POST method for recommendations with body)
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${tokenData.accessToken}`,
+        'Content-Type': 'application/json',
+        'X-API-Key': config.credentials.clientId,
+        'X-Correlation-ID': correlationId,
+      },
+      body: JSON.stringify(requestBody),
+    });
+    
+    const responseData = await response.json();
+    
+    if (!response.ok) {
+      console.error(`API Error: ${response.status} - ${JSON.stringify(responseData)}`);
+      return res.status(response.status).json(responseData);
+    }
+    
+    res.json(responseData);
+  } catch (error) {
+    console.error('Recommendations Proxy Error:', error);
+    res.status(500).json({
+      error: error.message
+    });
+  }
+});
+
+// Note: Preview Order and Preview Order Renewal now use existing order endpoints
+// with query parameters like ?preview=true&fetch-recommendations=true
+
+// Get Subscriptions (Customer-specific)
+app.get('/api/adobe/proxy/v3/customers/:customerId/subscriptions', async (req, res) => {
+  try {
+    const { customerId } = req.params;
+    const { environment = 'sandbox', ...queryParams } = req.query;
+    
+    // Get access token
+    const tokenData = await getOAuthAccessToken(environment);
+    
+    const config = ADOBE_CONFIG[environment];
+    const queryString = new URLSearchParams(queryParams).toString();
+    const apiUrl = `${config.endpoints.api}/v3/customers/${customerId}/subscriptions${queryString ? `?${queryString}` : ''}`;
+    
+    console.log(`Proxying customer subscriptions request to: ${apiUrl}`);
+    
+    // Generate correlation ID
+    const correlationId = generateCorrelationId();
+    
+    // Forward the request
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${tokenData.accessToken}`,
+        'Content-Type': 'application/json',
+        'X-API-Key': config.credentials.clientId,
+        'X-Correlation-ID': correlationId,
+      },
+    });
+    
+    const responseData = await response.json();
+    
+    if (!response.ok) {
+      console.error(`API Error: ${response.status} - ${JSON.stringify(responseData)}`);
+      return res.status(response.status).json(responseData);
+    }
+    
+    res.json(responseData);
+  } catch (error) {
+    console.error('Customer Subscriptions Proxy Error:', error);
+    res.status(500).json({
+      error: error.message
+    });
+  }
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Adobe VIP Marketplace API Proxy Server running on port ${PORT}`);
@@ -459,4 +575,7 @@ app.listen(PORT, () => {
   console.log(`Get order endpoint: http://localhost:${PORT}/api/adobe/proxy/v3/customers/:customerId/orders/:orderId`);
   console.log(`Order history endpoint: http://localhost:${PORT}/api/adobe/proxy/v3/customers/:customerId/orders`);
   console.log(`Price lists endpoint: http://localhost:${PORT}/api/adobe/proxy/v3/pricelist`);
+  console.log(`Recommendations endpoint: http://localhost:${PORT}/api/adobe/proxy/v3/recommendations`);
+  console.log(`Customer subscriptions endpoint: http://localhost:${PORT}/api/adobe/proxy/v3/customers/:customerId/subscriptions`);
+  console.log(`Note: Order preview uses existing order endpoints with ?preview=true&fetch-recommendations=true`);
 }); 

@@ -202,6 +202,13 @@ export const AdobeAuthPanel: React.FC<AdobeAuthPanelProps> = ({ onAuthStatusChan
 
         <Collapse in={panelExpanded}>
 
+        {/* Mock Mode Display */}
+        {adobeAuthService.isUsingMockAuth() && (
+          <Alert color="blue" title="Demo Mode" icon="🎭">
+            Using mock authentication for demonstration purposes. All API responses are simulated.
+          </Alert>
+        )}
+
         {/* Error Display */}
         {authStatus.error && (
           <Alert color="red" title="Authentication Error" icon={<IconX size={16} />}>

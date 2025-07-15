@@ -6,6 +6,7 @@ import { IconArrowLeft } from '@tabler/icons-react';
 import { AdobeAuthPanel } from './components/AdobeAuthPanel';
 import { FlexibleDiscounts } from './components/FlexibleDiscounts';
 import { PriceLists } from './components/PriceLists';
+import { AdobeRecommendations } from './components/AdobeRecommendations';
 import { AuthenticationStatus } from './services/adobeAuth';
 
 const AdobeNewFunctionalitiesFlow: React.FC = () => {
@@ -22,6 +23,7 @@ const AdobeNewFunctionalitiesHome: React.FC = () => {
   const [authStatus, setAuthStatus] = useState<AuthenticationStatus>({ isAuthenticated: false, status: 'disconnected' });
   const [flexDiscountsExpanded, setFlexDiscountsExpanded] = useState(false);
   const [priceListsExpanded, setPriceListsExpanded] = useState(false);
+  const [recommendationsExpanded, setRecommendationsExpanded] = useState(false);
 
   const handleAuthStatusChange = (status: AuthenticationStatus) => {
     setAuthStatus(status);
@@ -75,6 +77,14 @@ const AdobeNewFunctionalitiesHome: React.FC = () => {
                 <PriceLists 
                   expanded={priceListsExpanded}
                   onToggle={() => setPriceListsExpanded(!priceListsExpanded)}
+                />
+              </ScrollArea>
+
+              {/* Adobe Recommendations Management */}
+              <ScrollArea>
+                <AdobeRecommendations 
+                  expanded={recommendationsExpanded}
+                  onToggle={() => setRecommendationsExpanded(!recommendationsExpanded)}
                 />
               </ScrollArea>
             </>

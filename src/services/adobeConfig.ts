@@ -18,9 +18,17 @@ export interface AdobeConfig {
     api: string;
     ims: string;
   };
+  useMockAuth: boolean;
 }
 
-// Environment-specific configurations (credentials moved to secure proxy server)
+// Detect if we're running in production (Vercel) or development
+const isProduction = typeof window !== 'undefined' && (
+  window.location.hostname.includes('vercel.app') ||
+  window.location.hostname.includes('vercel.dev') ||
+  (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+);
+
+// Environment-specific configurations
 const ADOBE_CONFIGS: Record<AdobeEnvironment, Omit<AdobeConfig, 'environment'>> = {
   sandbox: {
     credentials: {
@@ -33,9 +41,10 @@ const ADOBE_CONFIGS: Record<AdobeEnvironment, Omit<AdobeConfig, 'environment'>> 
       distributorId: 'd1b4fd10-686f-4807-9839-2bf80707c21f', // Public - safe to keep in frontend
     },
     endpoints: {
-      api: 'http://localhost:3001/api/adobe/proxy', // Use proxy server
-      ims: 'http://localhost:3001/api/adobe', // Use proxy server
+      api: isProduction ? '/api/mock/adobe' : 'http://localhost:3001/api/adobe/proxy',
+      ims: isProduction ? '/api/mock/adobe' : 'http://localhost:3001/api/adobe',
     },
+    useMockAuth: isProduction,
   },
   production: {
     credentials: {
@@ -48,9 +57,10 @@ const ADOBE_CONFIGS: Record<AdobeEnvironment, Omit<AdobeConfig, 'environment'>> 
       distributorId: '',
     },
     endpoints: {
-      api: 'http://localhost:3001/api/adobe/proxy',
-      ims: 'http://localhost:3001/api/adobe',
+      api: isProduction ? '/api/mock/adobe' : 'http://localhost:3001/api/adobe/proxy',
+      ims: isProduction ? '/api/mock/adobe' : 'http://localhost:3001/api/adobe',
     },
+    useMockAuth: isProduction,
   },
 };
 
@@ -74,6 +84,11 @@ export class AdobeConfigService {
 
   isConfigured(): boolean {
     const config = this.getConfig();
+    // In mock mode, we're always configured
+    if (config.useMockAuth) {
+      return true;
+    }
+    
     // With proxy server architecture, we only need to validate public credentials and endpoints
     return !!(
       config.credentials.clientId &&
@@ -85,6 +100,12 @@ export class AdobeConfigService {
 
   validateCredentials(): { isValid: boolean; errors: string[] } {
     const config = this.getConfig();
+    
+    // In mock mode, always valid
+    if (config.useMockAuth) {
+      return { isValid: true, errors: [] };
+    }
+    
     const errors: string[] = [];
 
     if (!config.credentials.clientId) {
@@ -130,6 +151,11 @@ export class AdobeConfigService {
     const config = this.getConfig();
     const imsBase = config.endpoints.ims;
     return `${imsBase}/s/ent_vip_marketplace_api`;
+  }
+
+  // Check if we're using mock authentication
+  isUsingMockAuth(): boolean {
+    return this.getConfig().useMockAuth;
   }
 }
 

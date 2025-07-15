@@ -1,0 +1,24 @@
+[dotenv@17.1.0] injecting env (9) from .env (tip: ⚙️  write to custom object with { processEnv: myObject })
+Adobe VIP Marketplace API Proxy Server running on port 3001
+Status endpoint: http://localhost:3001/api/status
+Authentication endpoint: http://localhost:3001/api/adobe/authenticate
+Customer endpoint: http://localhost:3001/api/adobe/proxy/v3/customers/:customerId
+Health check endpoint: http://localhost:3001/api/adobe/proxy/v3/healthcheck
+Flexible discounts endpoint: http://localhost:3001/api/adobe/proxy/v3/flex-discounts
+Create order endpoint: http://localhost:3001/api/adobe/proxy/v3/customers/:customerId/orders
+Get order endpoint: http://localhost:3001/api/adobe/proxy/v3/customers/:customerId/orders/:orderId
+Order history endpoint: http://localhost:3001/api/adobe/proxy/v3/customers/:customerId/orders
+Price lists endpoint: http://localhost:3001/api/adobe/proxy/v3/pricelist
+Recommendations endpoint: http://localhost:3001/api/adobe/proxy/v3/recommendations
+Customer subscriptions endpoint: http://localhost:3001/api/adobe/proxy/v3/customers/:customerId/subscriptions
+Note: Order preview uses existing order endpoints with ?preview=true&fetch-recommendations=true
+Proxying recommendations request to: https://partnersandbox-stage.adobe.io/v3/customers/P1005230905/recommendations?country=US&language=EN&recommendation-context=GENERIC
+Recommendations Proxy Error: SyntaxError: Unexpected token '<', "<html>
+<h"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseJSONFromBytes (node:internal/deps/undici/undici:5738:19)
+    at successSteps (node:internal/deps/undici/undici:5719:27)
+    at fullyReadBody (node:internal/deps/undici/undici:4609:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async consumeBody (node:internal/deps/undici/undici:5728:7)
+    at async /Users/UI - LGA/proxy-server.js:502:26

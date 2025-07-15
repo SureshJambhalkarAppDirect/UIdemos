@@ -82,7 +82,183 @@ export class AdobeApiClient {
     this.baseUrl = adobeConfigService.getConfig().endpoints.api;
   }
 
-  // Generic API request method via proxy server
+  // Mock data generators
+  private generateMockHealthCheck(): HealthCheckResponse {
+    return {
+      status: 'OK',
+      message: 'Adobe VIP Marketplace API is healthy (mock response)',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  private generateMockCustomerAccount(customerId?: string): CustomerAccount {
+    return {
+      externalReferenceId: `ext-${Math.random().toString(36).substr(2, 8)}`,
+      customerId: customerId || `cust-${Math.random().toString(36).substr(2, 8)}`,
+      resellerId: 'P1000084654',
+      globalSalesEnabled: true,
+      companyProfile: {
+        companyName: 'Demo Company Inc',
+        preferredLanguage: 'en-US',
+        marketSegment: 'Enterprise',
+        marketSubSegments: ['Technology', 'Software'],
+        address: {
+          country: 'US',
+          region: 'CA',
+          city: 'San Francisco',
+          addressLine1: '123 Demo Street',
+          addressLine2: 'Suite 100',
+          postalCode: '94105',
+          phoneNumber: '+1-555-0123',
+        },
+        contacts: [
+          {
+            firstName: 'John',
+            lastName: 'Demo',
+            email: 'john.demo@democompany.com',
+            phoneNumber: '+1-555-0123',
+          },
+        ],
+      },
+      discounts: [
+        {
+          offerType: 'Volume',
+          level: 'Level 3',
+        },
+      ],
+      cotermDate: '2024-12-31',
+      creationDate: '2024-01-15',
+      status: 'ACTIVE',
+      linkedMembership: {
+        id: 'lm-demo-123',
+        name: 'Demo Partnership Program',
+        type: 'Standard',
+        linkedMembershipType: 'CONSORTIUM',
+        creationDate: '2024-01-15',
+      },
+    };
+  }
+
+  private generateMockResellerAccount(resellerId?: string): ResellerAccount {
+    return {
+      resellerId: resellerId || 'P1000084654',
+      companyProfile: {
+        companyName: 'Demo Reseller LLC',
+        preferredLanguage: 'en-US',
+        address: {
+          country: 'US',
+          region: 'NY',
+          city: 'New York',
+          addressLine1: '456 Reseller Ave',
+          postalCode: '10001',
+          phoneNumber: '+1-555-0456',
+        },
+      },
+      status: 'ACTIVE',
+      creationDate: '2023-06-15',
+    };
+  }
+
+  private generateMockRecommendations(): any[] {
+    return [
+      {
+        id: 'rec-1',
+        type: 'PRODUCT_RECOMMENDATION',
+        title: 'Creative Cloud Pro Edition',
+        description: 'Recommended based on current usage patterns',
+        products: [
+          {
+            sku: 'CC-PRO-TEAM',
+            name: 'Creative Cloud Pro Team',
+            price: 79.99,
+            currency: 'USD',
+          },
+        ],
+        confidence: 0.85,
+        createdDate: '2024-01-20',
+      },
+      {
+        id: 'rec-2',
+        type: 'UPGRADE_RECOMMENDATION',
+        title: 'Document Cloud Business',
+        description: 'Enhance productivity with advanced document features',
+        products: [
+          {
+            sku: 'DC-BUS-TEAM',
+            name: 'Document Cloud Business',
+            price: 29.99,
+            currency: 'USD',
+          },
+        ],
+        confidence: 0.72,
+        createdDate: '2024-01-18',
+      },
+    ];
+  }
+
+  private generateMockDeployments(): any[] {
+    return [
+      {
+        id: 'dep-1',
+        name: 'Creative Cloud Deployment',
+        status: 'ACTIVE',
+        licenseCount: 50,
+        assignedLicenses: 42,
+        products: ['CC-PRO-TEAM', 'CC-SINGLE-APP'],
+        deploymentDate: '2024-01-15',
+        lastUpdated: '2024-01-20',
+      },
+      {
+        id: 'dep-2',
+        name: 'Document Cloud Deployment',
+        status: 'PENDING',
+        licenseCount: 25,
+        assignedLicenses: 0,
+        products: ['DC-BUS-TEAM'],
+        deploymentDate: '2024-01-22',
+        lastUpdated: '2024-01-22',
+      },
+    ];
+  }
+
+  private generateMockOrders(): any[] {
+    return [
+      {
+        id: 'ord-1',
+        orderNumber: 'ORD-2024-001',
+        status: 'COMPLETED',
+        totalAmount: 3999.50,
+        currency: 'USD',
+        orderDate: '2024-01-15',
+        items: [
+          {
+            sku: 'CC-PRO-TEAM',
+            quantity: 50,
+            unitPrice: 79.99,
+            totalPrice: 3999.50,
+          },
+        ],
+      },
+      {
+        id: 'ord-2',
+        orderNumber: 'ORD-2024-002',
+        status: 'PROCESSING',
+        totalAmount: 749.75,
+        currency: 'USD',
+        orderDate: '2024-01-22',
+        items: [
+          {
+            sku: 'DC-BUS-TEAM',
+            quantity: 25,
+            unitPrice: 29.99,
+            totalPrice: 749.75,
+          },
+        ],
+      },
+    ];
+  }
+
+  // Generic API request method (mock or real via proxy server)
   private async makeRequest<T>(
     endpoint: string,
     options: {
@@ -92,6 +268,11 @@ export class AdobeApiClient {
     } = {}
   ): Promise<ApiResponse<T>> {
     const { method = 'GET', body, requiresAuth = true } = options;
+
+    // If using mock authentication, return mock data
+    if (adobeConfigService.isUsingMockAuth()) {
+      return this.makeMockRequest<T>(endpoint, options);
+    }
 
     try {
       // Ensure valid authentication if required
@@ -142,6 +323,138 @@ export class AdobeApiClient {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred',
+      };
+    }
+  }
+
+  // Mock API request handler
+  private async makeMockRequest<T>(
+    endpoint: string,
+    options: {
+      method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+      body?: any;
+      requiresAuth?: boolean;
+    } = {}
+  ): Promise<ApiResponse<T>> {
+    const { method = 'GET', body } = options;
+
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
+
+    try {
+      let mockData: any;
+
+      // Health check endpoints
+      if (endpoint.includes('/v3/healthcheck')) {
+        mockData = this.generateMockHealthCheck();
+      }
+      // Customer endpoints
+      else if (endpoint.match(/\/v3\/customers\/([^/]+)$/)) {
+        const customerId = endpoint.split('/').pop();
+        if (method === 'POST') {
+          mockData = this.generateMockCustomerAccount();
+        } else if (method === 'PATCH') {
+          mockData = { ...this.generateMockCustomerAccount(customerId), ...body };
+        } else {
+          mockData = this.generateMockCustomerAccount(customerId);
+        }
+      }
+      // Reseller endpoints
+      else if (endpoint.match(/\/v3\/resellers\/([^/]+)$/)) {
+        const resellerId = endpoint.split('/').pop();
+        if (method === 'POST') {
+          mockData = this.generateMockResellerAccount();
+        } else if (method === 'PATCH') {
+          mockData = { ...this.generateMockResellerAccount(resellerId), ...body };
+        } else {
+          mockData = this.generateMockResellerAccount(resellerId);
+        }
+      }
+      // Recommendations endpoints
+      else if (endpoint.includes('/recommendations')) {
+        if (method === 'POST') {
+          mockData = { id: 'new-rec', ...body, createdDate: new Date().toISOString() };
+        } else {
+          mockData = this.generateMockRecommendations();
+        }
+      }
+      // Deployments endpoints
+      else if (endpoint.includes('/deployments')) {
+        if (method === 'POST') {
+          mockData = { id: 'new-dep', ...body, deploymentDate: new Date().toISOString() };
+        } else if (method === 'PATCH') {
+          mockData = { ...this.generateMockDeployments()[0], ...body, lastUpdated: new Date().toISOString() };
+        } else {
+          mockData = this.generateMockDeployments();
+        }
+      }
+      // Orders endpoints
+      else if (endpoint.includes('/orders')) {
+        if (method === 'POST') {
+          mockData = { id: 'new-ord', ...body, orderDate: new Date().toISOString(), status: 'PROCESSING' };
+        } else {
+          mockData = this.generateMockOrders();
+        }
+      }
+      // Flex discounts endpoint
+      else if (endpoint.includes('/flex-discounts')) {
+        mockData = [
+          {
+            id: 'flex-1',
+            name: 'Volume Discount Tier 1',
+            type: 'VOLUME',
+            discountPercentage: 10,
+            minimumQuantity: 10,
+            status: 'ACTIVE',
+          },
+          {
+            id: 'flex-2',
+            name: 'Volume Discount Tier 2',
+            type: 'VOLUME',
+            discountPercentage: 15,
+            minimumQuantity: 50,
+            status: 'ACTIVE',
+          },
+        ];
+      }
+      // Price lists endpoint
+      else if (endpoint.includes('/price-lists') || endpoint.includes('/pricelists')) {
+        mockData = [
+          {
+            id: 'pl-1',
+            name: 'Standard Price List',
+            currency: 'USD',
+            effectiveDate: '2024-01-01',
+            products: [
+              {
+                sku: 'CC-PRO-TEAM',
+                name: 'Creative Cloud Pro Team',
+                price: 79.99,
+              },
+              {
+                sku: 'DC-BUS-TEAM',
+                name: 'Document Cloud Business',
+                price: 29.99,
+              },
+            ],
+          },
+        ];
+      }
+      // Default fallback
+      else {
+        mockData = { message: 'Mock API response', endpoint, method, timestamp: new Date().toISOString() };
+      }
+
+      return {
+        success: true,
+        data: mockData as T,
+        status: 200,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Mock API error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        status: 500,
       };
     }
   }
@@ -250,68 +563,14 @@ export class AdobeApiClient {
     });
   }
 
-  async getOrderDetails(customerId: string, orderId: string): Promise<ApiResponse<any>> {
-    return this.makeRequest(`/v3/customers/${customerId}/orders/${orderId}`);
+  // Flexible Discounts API
+  async getFlexDiscounts(): Promise<ApiResponse<any>> {
+    return this.makeRequest('/v3/flex-discounts');
   }
 
-  async updateOrder(customerId: string, orderId: string, orderData: any): Promise<ApiResponse<any>> {
-    return this.makeRequest(`/v3/customers/${customerId}/orders/${orderId}`, {
-      method: 'PATCH',
-      body: orderData,
-    });
-  }
-
-  // Subscriptions API
-  async getSubscriptions(customerId: string): Promise<ApiResponse<any>> {
-    return this.makeRequest(`/v3/customers/${customerId}/subscriptions`);
-  }
-
-  async createSubscription(customerId: string, subscriptionData: any): Promise<ApiResponse<any>> {
-    return this.makeRequest(`/v3/customers/${customerId}/subscriptions`, {
-      method: 'POST',
-      body: subscriptionData,
-    });
-  }
-
-  async getSubscriptionDetails(customerId: string, subscriptionId: string): Promise<ApiResponse<any>> {
-    return this.makeRequest(`/v3/customers/${customerId}/subscriptions/${subscriptionId}`);
-  }
-
-  async updateSubscription(
-    customerId: string,
-    subscriptionId: string,
-    subscriptionData: any
-  ): Promise<ApiResponse<any>> {
-    return this.makeRequest(`/v3/customers/${customerId}/subscriptions/${subscriptionId}`, {
-      method: 'PATCH',
-      body: subscriptionData,
-    });
-  }
-
-  // Transfers API
-  async getTransfers(): Promise<ApiResponse<any>> {
-    return this.makeRequest('/v3/transfers');
-  }
-
-  async createTransfer(transferData: any): Promise<ApiResponse<any>> {
-    return this.makeRequest('/v3/transfers', {
-      method: 'POST',
-      body: transferData,
-    });
-  }
-
-  async getTransferDetails(transferId: string): Promise<ApiResponse<any>> {
-    return this.makeRequest(`/v3/transfers/${transferId}`);
-  }
-
-  // Utility method to get current reseller ID for convenience
-  getCurrentResellerId(): string {
-    return adobeConfigService.getConfig().credentials.resellerId;
-  }
-
-  // Utility method to get current environment
-  getCurrentEnvironment(): string {
-    return adobeConfigService.getCurrentEnvironment();
+  // Price Lists API  
+  async getPriceLists(): Promise<ApiResponse<any>> {
+    return this.makeRequest('/v3/price-lists');
   }
 }
 

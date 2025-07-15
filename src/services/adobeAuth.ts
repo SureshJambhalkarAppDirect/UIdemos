@@ -24,40 +24,74 @@ export class AdobeAuthService {
 
   private statusListeners: ((status: AuthenticationStatus) => void)[] = [];
 
-  // Full authentication flow using proxy server
+  // Mock authentication for demo purposes
+  private async mockAuthenticate(): Promise<AdobeTokens> {
+    console.log('Using mock authentication for demo purposes...');
+    
+    // Simulate authentication delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    const mockTokens: AdobeTokens = {
+      jwt: null,
+      accessToken: 'mock-access-token-' + Math.random().toString(36).substr(2, 9),
+      tokenType: 'Bearer',
+      expiresIn: 3600,
+      expiresAt: Date.now() + (3600 * 1000),
+    };
+
+    return mockTokens;
+  }
+
+  // Real authentication flow using proxy server
+  private async realAuthenticate(): Promise<AdobeTokens> {
+    const config = adobeConfigService.getConfig();
+
+    // Call proxy server for authentication
+    console.log('Requesting authentication from proxy server...');
+    const response = await fetch(`${config.endpoints.ims}/authenticate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        environment: config.environment,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Authentication failed: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const tokenResponse = await response.json();
+
+    // Create token object
+    const tokens: AdobeTokens = {
+      jwt: tokenResponse.jwt,
+      accessToken: tokenResponse.access_token,
+      tokenType: tokenResponse.token_type || 'Bearer',
+      expiresIn: tokenResponse.expires_in || 3600,
+      expiresAt: Date.now() + ((tokenResponse.expires_in || 3600) * 1000),
+    };
+
+    return tokens;
+  }
+
+  // Full authentication flow (mock or real depending on environment)
   async authenticate(): Promise<AdobeTokens> {
     this.updateStatus({ isAuthenticated: false, status: 'connecting' });
 
     try {
       const config = adobeConfigService.getConfig();
+      let tokens: AdobeTokens;
 
-      // Call proxy server for authentication
-      console.log('Requesting authentication from proxy server...');
-      const response = await fetch(`${config.endpoints.ims}/authenticate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          environment: config.environment,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Authentication failed: ${response.status} ${response.statusText} - ${errorText}`);
+      if (config.useMockAuth) {
+        tokens = await this.mockAuthenticate();
+        console.log('Mock Adobe authentication successful');
+      } else {
+        tokens = await this.realAuthenticate();
+        console.log('Adobe authentication successful');
       }
-
-      const tokenResponse = await response.json();
-
-      // Create token object
-      const tokens: AdobeTokens = {
-        jwt: tokenResponse.jwt,
-        accessToken: tokenResponse.access_token,
-        tokenType: tokenResponse.token_type || 'Bearer',
-        expiresIn: tokenResponse.expires_in || 3600,
-        expiresAt: Date.now() + ((tokenResponse.expires_in || 3600) * 1000),
-      };
 
       // Update status
       this.updateStatus({
@@ -67,7 +101,6 @@ export class AdobeAuthService {
         lastAuthenticated: new Date(),
       });
 
-      console.log('Adobe authentication successful');
       return tokens;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
@@ -159,6 +192,11 @@ export class AdobeAuthService {
     if (!this.isTokenValid()) {
       await this.authenticate();
     }
+  }
+
+  // Check if we're using mock authentication
+  isUsingMockAuth(): boolean {
+    return adobeConfigService.isUsingMockAuth();
   }
 }
 
