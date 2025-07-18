@@ -24,27 +24,12 @@ export class AdobeAuthService {
 
   private statusListeners: ((status: AuthenticationStatus) => void)[] = [];
 
-  // Mock authentication for demo purposes
-  private async mockAuthenticate(): Promise<AdobeTokens> {
-    console.log('Using mock authentication for demo purposes...');
-    
-    // Simulate authentication delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const mockTokens: AdobeTokens = {
-      jwt: null,
-      accessToken: 'mock-access-token-' + Math.random().toString(36).substr(2, 9),
-      tokenType: 'Bearer',
-      expiresIn: 3600,
-      expiresAt: Date.now() + (3600 * 1000),
-    };
+  // Full authentication flow using proxy server
+  async authenticate(): Promise<AdobeTokens> {
+    this.updateStatus({ isAuthenticated: false, status: 'connecting' });
 
-    return mockTokens;
-  }
-
-  // Real authentication flow using proxy server
-  private async realAuthenticate(): Promise<AdobeTokens> {
-    const config = await adobeConfigService.getConfig();
+    try {
+      const config = adobeConfigService.getConfig();
 
       // Call proxy server for authentication
       console.log('Requesting authentication from proxy server...');
@@ -74,25 +59,6 @@ export class AdobeAuthService {
         expiresAt: Date.now() + ((tokenResponse.expires_in || 3600) * 1000),
       };
 
-    return tokens;
-  }
-
-  // Full authentication flow (mock or real depending on environment)
-  async authenticate(): Promise<AdobeTokens> {
-    this.updateStatus({ isAuthenticated: false, status: 'connecting' });
-
-    try {
-      const config = await adobeConfigService.getConfig();
-      let tokens: AdobeTokens;
-
-      if (config.useMockAuth) {
-        tokens = await this.mockAuthenticate();
-        console.log('Mock Adobe authentication successful');
-      } else {
-        tokens = await this.realAuthenticate();
-        console.log('Adobe authentication successful');
-      }
-
       // Update status
       this.updateStatus({
         isAuthenticated: true,
@@ -101,6 +67,7 @@ export class AdobeAuthService {
         lastAuthenticated: new Date(),
       });
 
+      console.log('Adobe authentication successful');
       return tokens;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
@@ -172,8 +139,8 @@ export class AdobeAuthService {
   }
 
   // Utility method to generate request headers for Adobe API calls
-  async getApiHeaders(): Promise<Record<string, string>> {
-    const config = await adobeConfigService.getConfig();
+  getApiHeaders(): Record<string, string> {
+    const config = adobeConfigService.getConfig();
     const accessToken = this.getAccessToken();
     
     if (!accessToken) {
@@ -192,16 +159,6 @@ export class AdobeAuthService {
     if (!this.isTokenValid()) {
       await this.authenticate();
     }
-  }
-
-  // Check if we're using mock authentication
-  async isUsingMockAuth(): Promise<boolean> {
-    return await adobeConfigService.isUsingMockAuth();
-  }
-
-  // Synchronous version for backwards compatibility
-  isUsingMockAuthSync(): boolean {
-    return adobeConfigService.isUsingMockAuthSync();
   }
 }
 

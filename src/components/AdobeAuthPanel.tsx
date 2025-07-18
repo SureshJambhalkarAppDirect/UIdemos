@@ -31,7 +31,6 @@ export const AdobeAuthPanel: React.FC<AdobeAuthPanelProps> = ({ onAuthStatusChan
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [panelExpanded, setPanelExpanded] = useState(true);
-  const [isUsingMockAuth, setIsUsingMockAuth] = useState(false);
 
   useEffect(() => {
     const unsubscribe = adobeAuthService.onStatusChange((status) => {
@@ -44,20 +43,6 @@ export const AdobeAuthPanel: React.FC<AdobeAuthPanelProps> = ({ onAuthStatusChan
       }
     });
 
-    // Check if using mock auth
-    const checkMockAuth = async () => {
-      try {
-        const mockAuth = await adobeAuthService.isUsingMockAuth();
-        setIsUsingMockAuth(mockAuth);
-      } catch (error) {
-        // Fallback to sync version if async fails
-        const mockAuth = adobeAuthService.isUsingMockAuthSync();
-        setIsUsingMockAuth(mockAuth);
-      }
-    };
-
-    checkMockAuth();
-
     return unsubscribe;
   }, [onAuthStatusChange, panelExpanded]);
 
@@ -68,21 +53,6 @@ export const AdobeAuthPanel: React.FC<AdobeAuthPanelProps> = ({ onAuthStatusChan
     
     // Clear authentication when switching environments
     adobeAuthService.clearAuth();
-
-    // Reset proxy server check to re-evaluate mock auth
-    adobeConfigService.resetProxyCheck();
-    
-    // Re-check mock auth status
-    const checkMockAuth = async () => {
-      try {
-        const mockAuth = await adobeAuthService.isUsingMockAuth();
-        setIsUsingMockAuth(mockAuth);
-      } catch (error) {
-        const mockAuth = adobeAuthService.isUsingMockAuthSync();
-        setIsUsingMockAuth(mockAuth);
-      }
-    };
-    checkMockAuth();
   };
 
   const handleAuthenticate = async () => {
@@ -98,23 +68,6 @@ export const AdobeAuthPanel: React.FC<AdobeAuthPanelProps> = ({ onAuthStatusChan
 
   const handleDisconnect = () => {
     adobeAuthService.clearAuth();
-  };
-
-  const handleRefresh = async () => {
-    // Reset proxy server check
-    adobeConfigService.resetProxyCheck();
-    
-    // Re-check mock auth status
-    try {
-      const mockAuth = await adobeAuthService.isUsingMockAuth();
-      setIsUsingMockAuth(mockAuth);
-    } catch (error) {
-      const mockAuth = adobeAuthService.isUsingMockAuthSync();
-      setIsUsingMockAuth(mockAuth);
-    }
-    
-    // Update auth status
-    setAuthStatus(adobeAuthService.getAuthStatus());
   };
 
   const handleCopyToken = async (token: string | null, tokenType: 'jwt' | 'access') => {
@@ -157,7 +110,7 @@ export const AdobeAuthPanel: React.FC<AdobeAuthPanelProps> = ({ onAuthStatusChan
   const getStatusText = () => {
     switch (authStatus.status) {
       case 'connected':
-        return isUsingMockAuth ? 'Connected (Mock)' : 'Connected';
+        return 'Connected';
       case 'connecting':
         return 'Connecting...';
       case 'error':
@@ -229,7 +182,7 @@ export const AdobeAuthPanel: React.FC<AdobeAuthPanelProps> = ({ onAuthStatusChan
                 variant="subtle"
                 color="gray"
                 size="sm"
-                onClick={handleRefresh}
+                onClick={() => setAuthStatus(adobeAuthService.getAuthStatus())}
               >
                 <IconRefresh size={14} />
               </ActionIcon>
@@ -248,13 +201,6 @@ export const AdobeAuthPanel: React.FC<AdobeAuthPanelProps> = ({ onAuthStatusChan
         </Group>
 
         <Collapse in={panelExpanded}>
-
-        {/* Mock Mode Display */}
-        {isUsingMockAuth && (
-          <Alert color="blue" title="Demo Mode" icon="🎭">
-            Using mock authentication for demonstration purposes. All API responses are simulated.
-          </Alert>
-        )}
 
         {/* Error Display */}
         {authStatus.error && (
@@ -281,10 +227,10 @@ export const AdobeAuthPanel: React.FC<AdobeAuthPanelProps> = ({ onAuthStatusChan
               onClick={handleAuthenticate}
               loading={isAuthenticating}
               leftSection={isAuthenticating ? <Loader size={16} /> : '🚀'}
-              disabled={false} // Always allow authentication attempt
+              disabled={!adobeConfigService.isConfigured()}
               size="sm"
             >
-              {isUsingMockAuth ? 'Initialize Mock Connection' : 'Initialize Adobe Connection'}
+              Initialize Adobe Connection
             </Button>
           )}
         </Group>
@@ -304,59 +250,49 @@ export const AdobeAuthPanel: React.FC<AdobeAuthPanelProps> = ({ onAuthStatusChan
                 {tokensExpanded ? <IconChevronUp size={12} /> : <IconChevronDown size={12} />}
               </ActionIcon>
             </Group>
+            {authStatus.tokens.accessToken && (
+              <ActionIcon
+                variant="subtle"
+                size="xs"
+                onClick={() => handleCopyToken(authStatus.tokens!.accessToken, 'access')}
+              >
+                {copiedToken === 'access' ? <IconCheck size={12} /> : <IconCopy size={12} />}
+              </ActionIcon>
+            )}
           </Group>
         )}
 
-        <Collapse in={tokensExpanded}>
+        {/* Expanded Token Details */}
         {authStatus.tokens && (
+          <Collapse in={tokensExpanded}>
             <Stack gap="xs">
-              <Divider />
-              
               {/* Access Token */}
-              <Group justify="space-between" align="flex-start">
-                <Box style={{ flex: 1 }}>
-                  <Text size="xs" fw={500} c="dimmed">Access Token</Text>
-                  <Code block size="xs" style={{ fontSize: '10px', wordBreak: 'break-all' }}>
+              {authStatus.tokens.accessToken && (
+                <Box>
+                  <Text size="xs" fw={500} c="dimmed" mb="xs">
+                    Access Token
+                  </Text>
+                  <Code block style={{ wordBreak: 'break-all', fontSize: '0.6rem', padding: '0.25rem' }}>
                     {formatToken(authStatus.tokens.accessToken)}
                   </Code>
                 </Box>
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  onClick={() => handleCopyToken(authStatus.tokens?.accessToken || null, 'access')}
-                >
-                  {copiedToken === 'access' ? <IconCheck size={12} color="green" /> : <IconCopy size={12} />}
-                </ActionIcon>
-              </Group>
-
-              {/* JWT Token (if available) */}
-              {authStatus.tokens.jwt && (
-                <Group justify="space-between" align="flex-start">
-                  <Box style={{ flex: 1 }}>
-                    <Text size="xs" fw={500} c="dimmed">JWT Token</Text>
-                    <Code block size="xs" style={{ fontSize: '10px', wordBreak: 'break-all' }}>
-                      {formatToken(authStatus.tokens.jwt)}
-                    </Code>
-                  </Box>
-                  <ActionIcon
-                    variant="subtle"
-                    size="sm"
-                    onClick={() => handleCopyToken(authStatus.tokens?.jwt || null, 'jwt')}
-                  >
-                    {copiedToken === 'jwt' ? <IconCheck size={12} color="green" /> : <IconCopy size={12} />}
-                  </ActionIcon>
-                </Group>
               )}
-
-              {/* Token Details */}
-              <Group>
-                <Text size="xs" c="dimmed">Type: {authStatus.tokens.tokenType}</Text>
-                <Text size="xs" c="dimmed">Expires: {getTokenExpiration()}</Text>
-              </Group>
+              {/* OAuth message if no JWT */}
+              {!authStatus.tokens.jwt && authStatus.tokens.accessToken && (
+                <Text size="xs" c="dimmed" ta="center">
+                  Using OAuth Server-to-Server authentication
+                </Text>
+              )}
             </Stack>
+          </Collapse>
         )}
-        </Collapse>
 
+        {/* Configuration Status */}
+        {!adobeConfigService.isConfigured() && (
+          <Alert color="yellow" title="Configuration Required">
+            Some credentials are missing for the {environment} environment. Please check your configuration.
+          </Alert>
+        )}
         </Collapse>
       </Stack>
     </Card>

@@ -72,7 +72,7 @@ const AdobeNewFunctionalitiesHome: React.FC = () => {
                 />
               </ScrollArea>
 
-              {/* Price Lists Management */}
+              {/* Price Lists Management - HIDDEN */}
               <ScrollArea style={{ display: 'none' }}>
                 <PriceLists 
                   expanded={priceListsExpanded}
@@ -80,7 +80,7 @@ const AdobeNewFunctionalitiesHome: React.FC = () => {
                 />
               </ScrollArea>
 
-              {/* Adobe Recommendations Management */}
+              {/* Adobe Recommendations Management - HIDDEN */}
               <ScrollArea style={{ display: 'none' }}>
                 <AdobeRecommendations 
                   expanded={recommendationsExpanded}
