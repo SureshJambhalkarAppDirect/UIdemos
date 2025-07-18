@@ -76,10 +76,9 @@ export interface HealthCheckResponse {
 }
 
 export class AdobeApiClient {
-  private baseUrl: string;
 
   constructor() {
-    this.baseUrl = adobeConfigService.getConfig().endpoints.api;
+    // No longer storing baseUrl as it's determined dynamically
   }
 
   // Mock data generators
@@ -269,8 +268,11 @@ export class AdobeApiClient {
   ): Promise<ApiResponse<T>> {
     const { method = 'GET', body, requiresAuth = true } = options;
 
+    // Get current configuration
+    const config = await adobeConfigService.getConfig();
+
     // If using mock authentication, return mock data
-    if (adobeConfigService.isUsingMockAuth()) {
+    if (config.useMockAuth) {
       return this.makeMockRequest<T>(endpoint, options);
     }
 
@@ -286,22 +288,24 @@ export class AdobeApiClient {
       };
 
       // For proxy server, we don't need to add auth headers as the proxy handles authentication
-      const config: RequestInit = {
+      const requestConfig: RequestInit = {
         method,
         headers,
       };
 
       if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-        config.body = JSON.stringify(body);
+        requestConfig.body = JSON.stringify(body);
       }
 
       // Add environment as query parameter for proxy server
       const currentEnvironment = adobeConfigService.getCurrentEnvironment();
       const separator = endpoint.includes('?') ? '&' : '?';
-      const urlWithEnvironment = `${this.baseUrl}${endpoint}${separator}environment=${currentEnvironment}`;
+      const urlWithEnvironment = `${config.endpoints.api}${endpoint}${separator}environment=${currentEnvironment}`;
+
+      console.log(`Making API request to: ${urlWithEnvironment}`);
 
       // Use proxy server endpoint
-      const response = await fetch(urlWithEnvironment, config);
+      const response = await fetch(urlWithEnvironment, requestConfig);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -338,6 +342,8 @@ export class AdobeApiClient {
   ): Promise<ApiResponse<T>> {
     const { method = 'GET', body } = options;
 
+    console.log(`Making MOCK API request to: ${endpoint} (method: ${method})`);
+
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
 
@@ -357,6 +363,36 @@ export class AdobeApiClient {
           mockData = { ...this.generateMockCustomerAccount(customerId), ...body };
         } else {
           mockData = this.generateMockCustomerAccount(customerId);
+        }
+      }
+      // Customer orders endpoint (for preview order)
+      else if (endpoint.includes('/orders')) {
+        if (method === 'POST') {
+          // Check if it's a preview request
+          const isPreview = endpoint.includes('preview=true') || (body && body.preview === true);
+          if (isPreview) {
+            mockData = {
+              orderPreview: {
+                totalAmount: 999.99,
+                currency: 'USD',
+                items: [
+                  {
+                    sku: body?.items?.[0]?.sku || '65322650CA01A12',
+                    quantity: body?.items?.[0]?.quantity || 1,
+                    unitPrice: 999.99,
+                    totalPrice: 999.99,
+                  },
+                ],
+                taxes: 89.99,
+                subtotal: 999.99,
+                grandTotal: 1089.98,
+              },
+            };
+          } else {
+            mockData = { id: 'new-ord', ...body, orderDate: new Date().toISOString(), status: 'PROCESSING' };
+          }
+        } else {
+          mockData = this.generateMockOrders();
         }
       }
       // Reseller endpoints
@@ -386,14 +422,6 @@ export class AdobeApiClient {
           mockData = { ...this.generateMockDeployments()[0], ...body, lastUpdated: new Date().toISOString() };
         } else {
           mockData = this.generateMockDeployments();
-        }
-      }
-      // Orders endpoints
-      else if (endpoint.includes('/orders')) {
-        if (method === 'POST') {
-          mockData = { id: 'new-ord', ...body, orderDate: new Date().toISOString(), status: 'PROCESSING' };
-        } else {
-          mockData = this.generateMockOrders();
         }
       }
       // Flex discounts endpoint
@@ -556,10 +584,11 @@ export class AdobeApiClient {
     return this.makeRequest(`/v3/customers/${customerId}/orders`);
   }
 
-  async createOrder(customerId: string, orderData: any): Promise<ApiResponse<any>> {
-    return this.makeRequest(`/v3/customers/${customerId}/orders`, {
+  async createOrder(customerId: string, orderData: any, preview: boolean = false): Promise<ApiResponse<any>> {
+    const endpoint = `/v3/customers/${customerId}/orders${preview ? '?preview=true' : ''}`;
+    return this.makeRequest(endpoint, {
       method: 'POST',
-      body: orderData,
+      body: { ...orderData, preview },
     });
   }
 

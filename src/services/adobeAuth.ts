@@ -44,35 +44,35 @@ export class AdobeAuthService {
 
   // Real authentication flow using proxy server
   private async realAuthenticate(): Promise<AdobeTokens> {
-    const config = adobeConfigService.getConfig();
+    const config = await adobeConfigService.getConfig();
 
-    // Call proxy server for authentication
-    console.log('Requesting authentication from proxy server...');
-    const response = await fetch(`${config.endpoints.ims}/authenticate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        environment: config.environment,
-      }),
-    });
+      // Call proxy server for authentication
+      console.log('Requesting authentication from proxy server...');
+      const response = await fetch(`${config.endpoints.ims}/authenticate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          environment: config.environment,
+        }),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Authentication failed: ${response.status} ${response.statusText} - ${errorText}`);
-    }
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Authentication failed: ${response.status} ${response.statusText} - ${errorText}`);
+      }
 
-    const tokenResponse = await response.json();
+      const tokenResponse = await response.json();
 
-    // Create token object
-    const tokens: AdobeTokens = {
-      jwt: tokenResponse.jwt,
-      accessToken: tokenResponse.access_token,
-      tokenType: tokenResponse.token_type || 'Bearer',
-      expiresIn: tokenResponse.expires_in || 3600,
-      expiresAt: Date.now() + ((tokenResponse.expires_in || 3600) * 1000),
-    };
+      // Create token object
+      const tokens: AdobeTokens = {
+        jwt: tokenResponse.jwt,
+        accessToken: tokenResponse.access_token,
+        tokenType: tokenResponse.token_type || 'Bearer',
+        expiresIn: tokenResponse.expires_in || 3600,
+        expiresAt: Date.now() + ((tokenResponse.expires_in || 3600) * 1000),
+      };
 
     return tokens;
   }
@@ -82,7 +82,7 @@ export class AdobeAuthService {
     this.updateStatus({ isAuthenticated: false, status: 'connecting' });
 
     try {
-      const config = adobeConfigService.getConfig();
+      const config = await adobeConfigService.getConfig();
       let tokens: AdobeTokens;
 
       if (config.useMockAuth) {
@@ -172,8 +172,8 @@ export class AdobeAuthService {
   }
 
   // Utility method to generate request headers for Adobe API calls
-  getApiHeaders(): Record<string, string> {
-    const config = adobeConfigService.getConfig();
+  async getApiHeaders(): Promise<Record<string, string>> {
+    const config = await adobeConfigService.getConfig();
     const accessToken = this.getAccessToken();
     
     if (!accessToken) {
@@ -195,8 +195,13 @@ export class AdobeAuthService {
   }
 
   // Check if we're using mock authentication
-  isUsingMockAuth(): boolean {
-    return adobeConfigService.isUsingMockAuth();
+  async isUsingMockAuth(): Promise<boolean> {
+    return await adobeConfigService.isUsingMockAuth();
+  }
+
+  // Synchronous version for backwards compatibility
+  isUsingMockAuthSync(): boolean {
+    return adobeConfigService.isUsingMockAuthSync();
   }
 }
 
