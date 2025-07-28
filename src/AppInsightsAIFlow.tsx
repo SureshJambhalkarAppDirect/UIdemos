@@ -592,28 +592,28 @@ interface ChatMessage {
   confidence?: number;
 }
 
+// Utility function to determine if a widget supports drill-down
+const isDrillDownEnabled = (widgetTitle: string): boolean => {
+  // List of widgets that don't support drill-down
+  const nonDrillDownWidgets = [
+    'Total Subscriptions',
+    'Total Companies',
+    'Total Users'
+  ];
+  
+  return !nonDrillDownWidgets.includes(widgetTitle);
+};
+
 const ChartCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <Box
-    style={{
-      backgroundColor: 'white',
-      borderRadius: '8px',
-      padding: '16px',
-      height: '100%'
-    }}
-  >
-    <Group justify="space-between" mb="md">
-      <span style={{ fontWeight: 500 }}>{title}</span>
-      <Group gap="xs">
-        <ActionIcon variant="subtle" size="sm">
-          <IconDotsVertical size={16} />
-        </ActionIcon>
-        <ActionIcon variant="subtle" size="sm">
-          <IconMaximize size={16} />
-        </ActionIcon>
-      </Group>
+  <Paper p="md" withBorder style={{ height: '100%' }}>
+    <Group justify="space-between" mb="sm">
+      <Text fw={500} size="md">{title}</Text>
+      <ActionIcon variant="subtle" size="sm">
+        <IconDotsVertical size={16} />
+      </ActionIcon>
     </Group>
     {children}
-  </Box>
+  </Paper>
 );
 
 const CustomView = () => {
@@ -1320,7 +1320,12 @@ const CustomView = () => {
                                             fontSize: '12px'
                                           }}
                                         />
-                                        <Bar dataKey="value" fill="#014929" radius={[2, 2, 0, 0]} />
+                                        <Bar 
+                                          dataKey="value" 
+                                          fill="#014929" 
+                                          radius={[2, 2, 0, 0]} 
+                                          style={{ cursor: isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default' }}
+                                        />
                                       </BarChart>
                                     ) : (
                                       <LineChart data={Array.isArray(message.insight.data) ? message.insight.data.slice(-6) : []}>
@@ -1345,8 +1350,17 @@ const CustomView = () => {
                                           dataKey="value" 
                                           stroke="#014929" 
                                           strokeWidth={2}
-                                          dot={{ fill: '#014929', strokeWidth: 0, r: 3 }}
-                                          activeDot={{ r: 4, fill: '#014929' }}
+                                          dot={{ 
+                                            fill: '#014929', 
+                                            strokeWidth: 0, 
+                                            r: 3,
+                                            cursor: isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default' 
+                                          }}
+                                          activeDot={{ 
+                                            r: 4, 
+                                            fill: '#014929',
+                                            cursor: isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default'
+                                          }}
                                         />
                                       </LineChart>
                                     )}
@@ -1447,26 +1461,145 @@ const CustomView = () => {
                                 {message.content}
                               </Text>
                               {message.insight && (
-                                <Box mt="md">
-                                  <Button 
-                                    size="sm"
-                                    radius="md"
-                                    leftSection={<IconChartLine size={16} />}
-                                    onClick={() => handleAiInsight(message.insight)}
-                                    style={{
-                                      backgroundColor: '#011B58',
-                                      border: 'none',
-                                      color: 'white',
-                                      fontWeight: 600,
-                                      padding: '8px 20px',
-                                      '&:hover': {
-                                        backgroundColor: '#001240'
-                                      }
-                                    }}
-                                  >
-                                    Add This Insight
-                                  </Button>
-          </Box>
+                                <>
+                                  <Box style={{ height: '220px', marginTop: '16px', marginBottom: '8px' }}>
+                                    {message.insight.visualization === 'insight' ? (
+                                      /* Key Insight Display */
+                                      <Box
+                                        style={{
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          height: '100%',
+                                          textAlign: 'center'
+                                        }}
+                                      >
+                                        <Text
+                                          style={{
+                                            fontSize: '72px',
+                                            fontWeight: 'bold',
+                                            color: '#6366f1',
+                                            lineHeight: 1
+                                          }}
+                                        >
+                                          {message.insight.data.value}
+                                        </Text>
+                                        <Text
+                                          style={{
+                                            fontSize: '18px',
+                                            color: '#374151',
+                                            marginTop: '8px',
+                                            fontWeight: 500
+                                          }}
+                                        >
+                                          {message.insight.data.label}
+                                        </Text>
+                                        <Text
+                                          style={{
+                                            fontSize: '14px',
+                                            color: '#6b7280',
+                                            marginTop: '4px'
+                                          }}
+                                        >
+                                          {message.insight.data.subtitle}
+                                        </Text>
+                                        <Text
+                                          style={{
+                                            fontSize: '14px',
+                                            color: message.insight.data.changeType === 'increase' ? '#22c55e' : '#ef4444',
+                                            marginTop: '8px',
+                                            fontWeight: 'bold'
+                                          }}
+                                        >
+                                          {message.insight.data.change}
+                                        </Text>
+                                      </Box>
+                                    ) : (
+                                      <ResponsiveContainer width="100%" height="100%">
+                                        {message.insight.visualization === 'bar' ? (
+                                          <BarChart data={Array.isArray(message.insight.data) ? message.insight.data.slice(-6) : []}>
+                                            <CartesianGrid strokeDasharray="2 2" vertical={false} stroke="#e9ecef" />
+                                            <XAxis 
+                                              dataKey="month" 
+                                              axisLine={false}
+                                              tickLine={false}
+                                              tick={{ fontSize: 10, fill: '#6c757d' }}
+                                            />
+                                            <YAxis hide />
+                                            <Tooltip 
+                                              contentStyle={{
+                                                backgroundColor: 'white',
+                                                border: '1px solid #dee2e6',
+                                                borderRadius: '6px',
+                                                fontSize: '12px'
+                                              }}
+                                            />
+                                            <Bar 
+                                              dataKey="value" 
+                                              fill="#014929" 
+                                              radius={[2, 2, 0, 0]} 
+                                              style={{ cursor: isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default' }}
+                                            />
+                                          </BarChart>
+                                        ) : (
+                                          <LineChart data={Array.isArray(message.insight.data) ? message.insight.data.slice(-6) : []}>
+                                            <CartesianGrid strokeDasharray="2 2" vertical={false} stroke="#e9ecef" />
+                                            <XAxis 
+                                              dataKey="month"
+                                              axisLine={false}
+                                              tickLine={false}
+                                              tick={{ fontSize: 10, fill: '#6c757d' }}
+                                            />
+                                            <YAxis hide />
+                                            <Tooltip 
+                                              contentStyle={{
+                                                backgroundColor: 'white',
+                                                border: '1px solid #dee2e6',
+                                                borderRadius: '6px',
+                                                fontSize: '12px'
+                                              }}
+                                            />
+                                            <Line 
+                                              type="monotone" 
+                                              dataKey="value" 
+                                              stroke="#014929" 
+                                              strokeWidth={2}
+                                              dot={{ 
+                                                fill: '#014929', 
+                                                strokeWidth: 0, 
+                                                r: 3,
+                                                cursor: isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default' 
+                                              }}
+                                              activeDot={{ 
+                                                r: 4, 
+                                                fill: '#014929',
+                                                cursor: isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default'
+                                              }}
+                                            />
+                                          </LineChart>
+                                        )}
+                                      </ResponsiveContainer>
+                                    )}
+                                  </Box>
+                                  <Box mt="md">
+                                    <Button 
+                                      size="sm"
+                                      radius="md"
+                                      leftSection={<IconChartLine size={16} />}
+                                      onClick={() => handleAiInsight(message.insight)}
+                                      style={{
+                                        backgroundColor: '#011B58',
+                                        border: 'none',
+                                        color: 'white',
+                                        fontWeight: 600,
+                                        padding: '8px 20px',
+                                      }}
+                                    >
+                                      Add This Insight
+                                    </Button>
+                                  </Box>
+                                </>
                               )}
                             </Paper>
         )}
@@ -1730,7 +1863,11 @@ const CustomView = () => {
                         <XAxis dataKey="month" />
                         <YAxis />
                         <Tooltip />
-                        <Bar dataKey="value" fill="#6366f1" />
+                        <Bar 
+                          dataKey="value" 
+                          fill="#6366f1" 
+                          style={{ cursor: isDrillDownEnabled(insight.title) ? 'pointer' : 'default' }}
+                        />
                       </BarChart>
                     ) : (
                       <LineChart data={Array.isArray(insight.data) ? insight.data : []}>
@@ -1742,7 +1879,10 @@ const CustomView = () => {
                           type="monotone" 
                           dataKey="value" 
                           stroke="#6366f1" 
-                          dot={{ fill: '#6366f1' }}
+                          dot={{ 
+                            fill: '#6366f1',
+                            cursor: isDrillDownEnabled(insight.title) ? 'pointer' : 'default'
+                          }}
                         />
                       </LineChart>
                     )}
@@ -1926,7 +2066,7 @@ const MarketplaceInsights = () => (
                 type="monotone" 
                 dataKey="value" 
                 stroke="#6366f1" 
-                dot={{ fill: '#6366f1' }}
+                dot={{ fill: '#6366f1', cursor: 'default' }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -1944,7 +2084,7 @@ const MarketplaceInsights = () => (
                 type="monotone" 
                 dataKey="value" 
                 stroke="#6366f1" 
-                dot={{ fill: '#6366f1' }}
+                dot={{ fill: '#6366f1', cursor: 'default' }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -1958,7 +2098,11 @@ const MarketplaceInsights = () => (
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="month" />
               <YAxis />
-              <Bar dataKey="value" fill="#6366f1" />
+              <Bar 
+                dataKey="value" 
+                fill="#6366f1" 
+                style={{ cursor: 'pointer' }}
+              />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -1975,7 +2119,7 @@ const MarketplaceInsights = () => (
                 type="monotone" 
                 dataKey="value" 
                 stroke="#6366f1" 
-                dot={{ fill: '#6366f1' }}
+                dot={{ fill: '#6366f1', cursor: 'default' }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -1989,7 +2133,11 @@ const MarketplaceInsights = () => (
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="month" />
               <YAxis />
-              <Bar dataKey="value" fill="#6366f1" />
+              <Bar 
+                dataKey="value" 
+                fill="#6366f1" 
+                style={{ cursor: 'pointer' }}
+              />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -2006,7 +2154,7 @@ const MarketplaceInsights = () => (
                 type="monotone" 
                 dataKey="value" 
                 stroke="#6366f1" 
-                dot={{ fill: '#6366f1' }}
+                dot={{ fill: '#6366f1', cursor: 'pointer' }}
               />
             </LineChart>
           </ResponsiveContainer>
