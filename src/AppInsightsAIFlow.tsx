@@ -27,7 +27,8 @@ import {
   Paper,
   Loader,
   ThemeIcon,
-  ScrollArea
+  ScrollArea,
+  Tooltip
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { 
@@ -53,7 +54,9 @@ import {
   IconBulb,
   IconTrendingUp,
   IconChartLine,
-  IconChartPie
+  IconChartPie,
+  IconChevronLeft,
+  IconChevronRight
 } from '@tabler/icons-react';
 import { processQueryWithLLM, getContextualSuggestions as getEnhancedSuggestions } from './services/llmService';
 import { isConfigured, getConfig } from './services/llmConfig';
@@ -68,7 +71,7 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
-  Tooltip
+  Tooltip as RechartsTooltip
 } from 'recharts';
 
 // Mock data for charts
@@ -604,17 +607,127 @@ const isDrillDownEnabled = (widgetTitle: string): boolean => {
   return !nonDrillDownWidgets.includes(widgetTitle);
 };
 
-const ChartCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <Paper p="md" withBorder style={{ height: '100%' }}>
-    <Group justify="space-between" mb="sm">
-      <Text fw={500} size="md">{title}</Text>
-      <ActionIcon variant="subtle" size="sm">
-        <IconDotsVertical size={16} />
-      </ActionIcon>
-    </Group>
-    {children}
-  </Paper>
-);
+// Tooltip options for non-drill-down widgets
+// You can choose the tooltip text that best fits your needs
+const getNonDrillDownTooltip = (widgetTitle: string, option: number = 4): string => {
+  const options = {
+    // General options
+    1: "This view shows summary data that cannot be further broken down",
+    2: "This metric provides an overview only",
+    3: "No drill-down available for this summary view",
+    4: "Averages and totals are aggregated metrics without drill-down options",
+    
+    // Widget-specific options (kept for reference but not used by default)
+    "Total Subscriptions": {
+      1: "This view shows aggregate subscription totals across all time periods",
+      2: "This growth chart incorporates historical data with no further breakdown available",
+      3: "Total subscriptions metric shows combined data with no drill-down option" 
+    },
+    "Total Companies": {
+      1: "This view shows the overall number of companies with no further breakdown available",
+      2: "Company count data is presented as an aggregate total only",
+      3: "This metric represents system-wide company totals without drill-down capability"
+    },
+    "Total Users": {
+      1: "This view provides a system-wide user count that cannot be broken down further",
+      2: "User totals are presented as aggregate metrics without drill-down options",
+      3: "This growth chart shows combined user data across all segments"
+    }
+  };
+  
+  // Always use option 4 as default unless explicitly overridden
+  return options[option] || options[4];
+};
+
+// Enhanced ChartCard component with optional badge for non-drill-down widgets
+const ChartCard = ({ title, children }: { title: string; children: React.ReactNode }) => {
+  const canDrillDown = isDrillDownEnabled(title);
+  
+  return (
+    <Paper p="md" withBorder style={{ height: '100%' }}>
+      <Group justify="space-between" mb="sm">
+        <Text fw={500} size="md">{title}</Text>
+        <Group gap="xs">
+          {!canDrillDown && (
+            <Tooltip 
+              label={getNonDrillDownTooltip(title)} 
+              position="top"
+              withArrow
+              arrowPosition="center"
+            >
+              <Badge 
+                size="xs" 
+                color="gray" 
+                variant="light"
+                style={{ 
+                  opacity: 0.7,
+                  textTransform: 'none',
+                  fontWeight: 400
+                }}
+              >
+                View only
+              </Badge>
+            </Tooltip>
+          )}
+          <ActionIcon variant="subtle" size="sm">
+            <IconDotsVertical size={16} />
+          </ActionIcon>
+        </Group>
+      </Group>
+      {children}
+    </Paper>
+  );
+};
+
+// Move generateMockDrillDownData out of the components to be shared
+// Function to generate mock drill-down data
+const generateMockDrillDownData = (title: string, dataPoint: any) => {
+  // Different mock data based on widget type
+  if (title === "Invoiced Amount") {
+    // Generate invoices data
+    return Array(508).fill(0).map((_, i) => ({
+      invoiceNumber: `2145${Math.floor(10000 + Math.random() * 90000)}`,
+      companyName: ["Wilson appdistribution test", "Jan 31 Indirect Provider", "UserAssignment - 0831", "Appdirect", "SandhyaUATHGO"][Math.floor(Math.random() * 5)],
+      dueDate: `2025-06-${String(Math.floor(1 + Math.random() * 30)).padStart(2, '0')}`,
+      balanceDue: "0.00",
+      isRefund: "N",
+      status: "PAID",
+      total: [
+        "0.00", 
+        "19.03", 
+        "235.61", 
+        "420.94", 
+        "6492.18"
+      ][Math.floor(Math.random() * 5)]
+    }));
+  } else if (title === "Received Payments") {
+    // Generate payments data
+    return Array(128).fill(0).map((_, i) => ({
+      paymentId: `PAY-${Math.floor(100000 + Math.random() * 900000)}`,
+      companyName: ["Wilson appdistribution", "Jan 31 Provider", "Enterprise Customer", "Appdirect", "GlobalTech Inc."][Math.floor(Math.random() * 5)],
+      paymentDate: `2025-06-${String(Math.floor(1 + Math.random() * 30)).padStart(2, '0')}`,
+      amount: [
+        "125.50", 
+        "892.75", 
+        "1435.25", 
+        "2750.00", 
+        "5125.90"
+      ][Math.floor(Math.random() * 5)],
+      method: ["Credit Card", "ACH", "Wire Transfer", "Check", "PayPal"][Math.floor(Math.random() * 5)],
+      status: ["Completed", "Processing", "Completed", "Completed", "Failed"][Math.floor(Math.random() * 5)]
+    }));
+  } else {
+    // Generic data for other drill-down widgets
+    return Array(52).fill(0).map((_, i) => ({
+      id: `ITEM-${Math.floor(10000 + Math.random() * 90000)}`,
+      name: `Record ${i+1}`,
+      date: `2025-06-${String(Math.floor(1 + Math.random() * 30)).padStart(2, '0')}`,
+      value: `${Math.floor(100 + Math.random() * 9900)}.${Math.floor(10 + Math.random() * 90)}`,
+      category: ["Category A", "Category B", "Category C", "Category D"][Math.floor(Math.random() * 4)],
+      status: ["Active", "Pending", "Completed", "On Hold"][Math.floor(Math.random() * 4)]
+    }));
+  }
+};
 
 const CustomView = () => {
   // Track which view we're showing
@@ -628,6 +741,14 @@ const CustomView = () => {
     title: string;
     data: any[] | any;
   }>>([]);
+
+  // Drill-down modal state
+  const [drillDownModalOpen, setDrillDownModalOpen] = useState(false);
+  const [drillDownData, setDrillDownData] = useState<{
+    title: string;
+    dataPoint: any;
+    results: any[];
+  } | null>(null);
 
   // AI Assistant state
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -918,6 +1039,40 @@ const CustomView = () => {
   ];
     }
     return suggestedQuestions;
+  };
+
+  // Add a handler for chart point clicks
+  const handleChartPointClick = (title: string, dataPoint: any) => {
+    // Only open drill-down for widgets that support it
+    if (isDrillDownEnabled(title)) {
+      // Generate mock data based on the clicked data point
+      const mockResults = generateMockDrillDownData(title, dataPoint);
+      
+      setDrillDownData({
+        title,
+        dataPoint,
+        results: mockResults
+      });
+      
+      setDrillDownModalOpen(true);
+    }
+  };
+
+  // Add a specific handler for message chart clicks
+  const handleMessageChartClick = (title: string, dataPoint: any) => {
+    // Only open drill-down for widgets that support it
+    if (isDrillDownEnabled(title)) {
+      // Generate mock data based on the clicked data point
+      const mockResults = generateMockDrillDownData(title, dataPoint);
+      
+      setDrillDownData({
+        title,
+        dataPoint,
+        results: mockResults
+      });
+      
+      setDrillDownModalOpen(true);
+    }
   };
 
   return (
@@ -1312,7 +1467,7 @@ const CustomView = () => {
                                           tick={{ fontSize: 10, fill: '#6c757d' }}
                                         />
                                         <YAxis hide />
-                                        <Tooltip 
+                                        <RechartsTooltip 
                                           contentStyle={{
                                             backgroundColor: 'white',
                                             border: '1px solid #dee2e6',
@@ -1324,7 +1479,13 @@ const CustomView = () => {
                                           dataKey="value" 
                                           fill="#014929" 
                                           radius={[2, 2, 0, 0]} 
-                                          style={{ cursor: isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default' }}
+                                          style={{ cursor: message.insight && isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default' }}
+                                          onClick={message.insight && isDrillDownEnabled(message.insight.title) ? (data) => {
+                                            const insight = message.insight;
+                                            if (insight) {
+                                              handleMessageChartClick(insight.title, data);
+                                            }
+                                          } : undefined}
                                         />
                                       </BarChart>
                                     ) : (
@@ -1337,7 +1498,7 @@ const CustomView = () => {
                                           tick={{ fontSize: 10, fill: '#6c757d' }}
                                         />
                                         <YAxis hide />
-                                        <Tooltip 
+                                        <RechartsTooltip 
                                           contentStyle={{
                                             backgroundColor: 'white',
                                             border: '1px solid #dee2e6',
@@ -1354,13 +1515,19 @@ const CustomView = () => {
                                             fill: '#014929', 
                                             strokeWidth: 0, 
                                             r: 3,
-                                            cursor: isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default' 
+                                            cursor: message.insight && isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default' 
                                           }}
                                           activeDot={{ 
                                             r: 4, 
                                             fill: '#014929',
-                                            cursor: isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default'
+                                            cursor: message.insight && isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default'
                                           }}
+                                          onClick={message.insight && isDrillDownEnabled(message.insight.title) ? (data) => {
+                                            const insight = message.insight;
+                                            if (insight) {
+                                              handleMessageChartClick(insight.title, data);
+                                            }
+                                          } : undefined}
                                         />
                                       </LineChart>
                                     )}
@@ -1462,9 +1629,30 @@ const CustomView = () => {
                               </Text>
                               {message.insight && (
                                 <>
-                                  <Box style={{ height: '220px', marginTop: '16px', marginBottom: '8px' }}>
+                                  <Box style={{ height: '220px', marginTop: '16px', marginBottom: '8px', position: 'relative' }}>
+                                    {!isDrillDownEnabled(message.insight.title) && message.insight.visualization !== 'insight' && (
+                                      <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 10 }}>
+                                        <Tooltip
+                                          label={getNonDrillDownTooltip(message.insight.title)}
+                                          position="top"
+                                          withArrow
+                                        >
+                                          <Badge 
+                                            size="xs" 
+                                            color="gray" 
+                                            variant="light"
+                                            style={{ 
+                                              opacity: 0.7,
+                                              textTransform: 'none',
+                                              fontWeight: 400
+                                            }}
+                                          >
+                                            View only
+                                          </Badge>
+                                        </Tooltip>
+                                      </div>
+                                    )}
                                     {message.insight.visualization === 'insight' ? (
-                                      /* Key Insight Display */
                                       <Box
                                         style={{
                                           display: 'flex',
@@ -1527,7 +1715,7 @@ const CustomView = () => {
                                               tick={{ fontSize: 10, fill: '#6c757d' }}
                                             />
                                             <YAxis hide />
-                                            <Tooltip 
+                                            <RechartsTooltip 
                                               contentStyle={{
                                                 backgroundColor: 'white',
                                                 border: '1px solid #dee2e6',
@@ -1539,7 +1727,13 @@ const CustomView = () => {
                                               dataKey="value" 
                                               fill="#014929" 
                                               radius={[2, 2, 0, 0]} 
-                                              style={{ cursor: isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default' }}
+                                              style={{ cursor: message.insight && isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default' }}
+                                              onClick={message.insight && isDrillDownEnabled(message.insight.title) ? (data) => {
+                                                const insight = message.insight;
+                                                if (insight) {
+                                                  handleMessageChartClick(insight.title, data);
+                                                }
+                                              } : undefined}
                                             />
                                           </BarChart>
                                         ) : (
@@ -1552,7 +1746,7 @@ const CustomView = () => {
                                               tick={{ fontSize: 10, fill: '#6c757d' }}
                                             />
                                             <YAxis hide />
-                                            <Tooltip 
+                                            <RechartsTooltip 
                                               contentStyle={{
                                                 backgroundColor: 'white',
                                                 border: '1px solid #dee2e6',
@@ -1569,13 +1763,19 @@ const CustomView = () => {
                                                 fill: '#014929', 
                                                 strokeWidth: 0, 
                                                 r: 3,
-                                                cursor: isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default' 
+                                                cursor: message.insight && isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default' 
                                               }}
                                               activeDot={{ 
                                                 r: 4, 
                                                 fill: '#014929',
-                                                cursor: isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default'
+                                                cursor: message.insight && isDrillDownEnabled(message.insight.title) ? 'pointer' : 'default'
                                               }}
+                                              onClick={message.insight && isDrillDownEnabled(message.insight.title) ? (data) => {
+                                                const insight = message.insight;
+                                                if (insight) {
+                                                  handleMessageChartClick(insight.title, data);
+                                                }
+                                              } : undefined}
                                             />
                                           </LineChart>
                                         )}
@@ -1862,11 +2062,12 @@ const CustomView = () => {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="month" />
                         <YAxis />
-                        <Tooltip />
+                        <RechartsTooltip />
                         <Bar 
                           dataKey="value" 
                           fill="#6366f1" 
                           style={{ cursor: isDrillDownEnabled(insight.title) ? 'pointer' : 'default' }}
+                          onClick={isDrillDownEnabled(insight.title) ? (data) => handleChartPointClick(insight.title, data) : undefined}
                         />
                       </BarChart>
                     ) : (
@@ -1874,7 +2075,7 @@ const CustomView = () => {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="month" />
                         <YAxis />
-                        <Tooltip />
+                        <RechartsTooltip />
                         <Line 
                           type="monotone" 
                           dataKey="value" 
@@ -1883,6 +2084,12 @@ const CustomView = () => {
                             fill: '#6366f1',
                             cursor: isDrillDownEnabled(insight.title) ? 'pointer' : 'default'
                           }}
+                          activeDot={{ 
+                            r: 4, 
+                            fill: '#6366f1',
+                            cursor: isDrillDownEnabled(insight.title) ? 'pointer' : 'default'
+                          }}
+                          onClick={isDrillDownEnabled(insight.title) ? (data) => handleChartPointClick(insight.title, data) : undefined}
                         />
                       </LineChart>
                     )}
@@ -1952,6 +2159,140 @@ const CustomView = () => {
         opened={settingsModalOpened} 
         onClose={() => setSettingsModalOpened(false)} 
       />
+
+      {drillDownModalOpen && drillDownData && (
+        <Modal 
+          opened={drillDownModalOpen}
+          onClose={() => setDrillDownModalOpen(false)}
+          title={drillDownData.title}
+          size="xl"
+        >
+          <Box mb="md">
+            <Group justify="space-between">
+              <Group>
+                <ActionIcon variant="light" size="md">
+                  <IconFilter size={16} />
+                </ActionIcon>
+                <Button variant="subtle" size="xs">Clear Filters</Button>
+              </Group>
+              <Text size="sm" c="dimmed">{drillDownData.results.length} results</Text>
+            </Group>
+          </Box>
+
+          {drillDownData.title === "Invoiced Amount" && (
+            <>
+              <Table striped withTableBorder>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Invoice Number</Table.Th>
+                    <Table.Th>Company Name</Table.Th>
+                    <Table.Th>Invoice Due Date</Table.Th>
+                    <Table.Th>Balance Due (in $)</Table.Th>
+                    <Table.Th>Is Refund</Table.Th>
+                    <Table.Th>Status</Table.Th>
+                    <Table.Th>Total (in $)</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {drillDownData.results.slice(0, 10).map((invoice, index) => (
+                    <Table.Tr key={index}>
+                      <Table.Td>{invoice.invoiceNumber}</Table.Td>
+                      <Table.Td>{invoice.companyName}</Table.Td>
+                      <Table.Td>{invoice.dueDate}</Table.Td>
+                      <Table.Td>{invoice.balanceDue}</Table.Td>
+                      <Table.Td>{invoice.isRefund}</Table.Td>
+                      <Table.Td>{invoice.status}</Table.Td>
+                      <Table.Td>{invoice.total}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+              <Group justify="space-between" mt="md">
+                <Text size="sm">Rows per page: 10</Text>
+                <Group>
+                  <Text size="sm">1-10 of {drillDownData.results.length}</Text>
+                  <ActionIcon variant="subtle" disabled><IconChevronLeft size={16} /></ActionIcon>
+                  <ActionIcon variant="subtle"><IconChevronRight size={16} /></ActionIcon>
+                </Group>
+              </Group>
+            </>
+          )}
+
+          {drillDownData.title === "Received Payments" && (
+            <>
+              <Table striped withTableBorder>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Payment ID</Table.Th>
+                    <Table.Th>Company</Table.Th>
+                    <Table.Th>Payment Date</Table.Th>
+                    <Table.Th>Amount</Table.Th>
+                    <Table.Th>Method</Table.Th>
+                    <Table.Th>Status</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {drillDownData.results.slice(0, 10).map((payment, index) => (
+                    <Table.Tr key={index}>
+                      <Table.Td>{payment.paymentId}</Table.Td>
+                      <Table.Td>{payment.companyName}</Table.Td>
+                      <Table.Td>{payment.paymentDate}</Table.Td>
+                      <Table.Td>${payment.amount}</Table.Td>
+                      <Table.Td>{payment.method}</Table.Td>
+                      <Table.Td>{payment.status}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+              <Group justify="space-between" mt="md">
+                <Text size="sm">Rows per page: 10</Text>
+                <Group>
+                  <Text size="sm">1-10 of {drillDownData.results.length}</Text>
+                  <ActionIcon variant="subtle" disabled><IconChevronLeft size={16} /></ActionIcon>
+                  <ActionIcon variant="subtle"><IconChevronRight size={16} /></ActionIcon>
+                </Group>
+              </Group>
+            </>
+          )}
+
+          {drillDownData.title !== "Invoiced Amount" && drillDownData.title !== "Received Payments" && (
+            <>
+              <Table striped withTableBorder>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>ID</Table.Th>
+                    <Table.Th>Name</Table.Th>
+                    <Table.Th>Date</Table.Th>
+                    <Table.Th>Value</Table.Th>
+                    <Table.Th>Category</Table.Th>
+                    <Table.Th>Status</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {drillDownData.results.slice(0, 10).map((item, index) => (
+                    <Table.Tr key={index}>
+                      <Table.Td>{item.id}</Table.Td>
+                      <Table.Td>{item.name}</Table.Td>
+                      <Table.Td>{item.date}</Table.Td>
+                      <Table.Td>${item.value}</Table.Td>
+                      <Table.Td>{item.category}</Table.Td>
+                      <Table.Td>{item.status}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+              <Group justify="space-between" mt="md">
+                <Text size="sm">Rows per page: 10</Text>
+                <Group>
+                  <Text size="sm">1-10 of {drillDownData.results.length}</Text>
+                  <ActionIcon variant="subtle" disabled><IconChevronLeft size={16} /></ActionIcon>
+                  <ActionIcon variant="subtle"><IconChevronRight size={16} /></ActionIcon>
+                </Group>
+              </Group>
+            </>
+          )}
+        </Modal>
+      )}
     </Box>
   );
 };
@@ -2043,125 +2384,298 @@ const AppInsightsAIFlow = () => {
 };
 
 // MarketplaceInsights component with all the charts from before
-const MarketplaceInsights = () => (
-  <Box p="md">
-    <Tabs defaultValue="commerce">
-      <Tabs.List>
-        <Tabs.Tab value="commerce">Commerce</Tabs.Tab>
-        <Tabs.Tab value="products">Products & Orders</Tabs.Tab>
-        <Tabs.Tab value="revenue">Revenue</Tabs.Tab>
-        <Tabs.Tab value="usage">Company Usage</Tabs.Tab>
-      </Tabs.List>
-    </Tabs>
+const MarketplaceInsights = () => {
+  // Add state for drill-down modal
+  const [drillDownModalOpen, setDrillDownModalOpen] = useState(false);
+  const [drillDownData, setDrillDownData] = useState<{
+    title: string;
+    dataPoint: any;
+    results: any[];
+  } | null>(null);
 
-    <Grid mt="md" gutter="md">
-      <Grid.Col span={6}>
-        <ChartCard title="Total Subscriptions">
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Line 
-                type="monotone" 
-                dataKey="value" 
-                stroke="#6366f1" 
-                dot={{ fill: '#6366f1', cursor: 'default' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </Grid.Col>
+  // Handler for chart point clicks
+  const handleChartPointClick = (title: string, dataPoint: any) => {
+    // Only open drill-down for widgets that support it
+    if (isDrillDownEnabled(title)) {
+      // Generate mock data based on the clicked data point
+      const mockResults = generateMockDrillDownData(title, dataPoint);
+      
+      setDrillDownData({
+        title,
+        dataPoint,
+        results: mockResults
+      });
+      
+      setDrillDownModalOpen(true);
+    }
+  };
 
-      <Grid.Col span={6}>
-        <ChartCard title="Total Companies">
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Line 
-                type="monotone" 
-                dataKey="value" 
-                stroke="#6366f1" 
-                dot={{ fill: '#6366f1', cursor: 'default' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </Grid.Col>
+  return (
+    <Box p="md">
+      <Tabs defaultValue="commerce">
+        <Tabs.List>
+          <Tabs.Tab value="commerce">Commerce</Tabs.Tab>
+          <Tabs.Tab value="products">Products & Orders</Tabs.Tab>
+          <Tabs.Tab value="revenue">Revenue</Tabs.Tab>
+          <Tabs.Tab value="usage">Company Usage</Tabs.Tab>
+        </Tabs.List>
+      </Tabs>
 
-      <Grid.Col span={6}>
-        <ChartCard title="Invoiced Amount">
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={invoicedData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Bar 
-                dataKey="value" 
-                fill="#6366f1" 
-                style={{ cursor: 'pointer' }}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </Grid.Col>
+      <Grid mt="md" gutter="md">
+        {/* The ChartCard component will automatically add the badge and tooltip based on the title */}
+        <Grid.Col span={6}>
+          <ChartCard title="Total Subscriptions">
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <RechartsTooltip />
+                <Line 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#6366f1" 
+                  dot={{ fill: '#6366f1', cursor: 'default' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid.Col>
 
-      <Grid.Col span={6}>
-        <ChartCard title="Total Users">
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Line 
-                type="monotone" 
-                dataKey="value" 
-                stroke="#6366f1" 
-                dot={{ fill: '#6366f1', cursor: 'default' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </Grid.Col>
+        <Grid.Col span={6}>
+          <ChartCard title="Total Companies">
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <RechartsTooltip />
+                <Line 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#6366f1" 
+                  dot={{ fill: '#6366f1', cursor: 'default' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid.Col>
 
-      <Grid.Col span={6}>
-        <ChartCard title="Received Payments">
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={receivedPaymentsData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Bar 
-                dataKey="value" 
-                fill="#6366f1" 
-                style={{ cursor: 'pointer' }}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </Grid.Col>
+        <Grid.Col span={6}>
+          <ChartCard title="Invoiced Amount">
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={invoicedData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <RechartsTooltip />
+                <Bar 
+                  dataKey="value" 
+                  fill="#6366f1" 
+                  style={{ cursor: 'pointer' }}
+                  onClick={(data) => handleChartPointClick("Invoiced Amount", data)}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid.Col>
 
-      <Grid.Col span={6}>
-        <ChartCard title="Assigned Seats">
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={assignedSeatsData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Line 
-                type="monotone" 
-                dataKey="value" 
-                stroke="#6366f1" 
-                dot={{ fill: '#6366f1', cursor: 'pointer' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </Grid.Col>
-    </Grid>
-  </Box>
-);
+        <Grid.Col span={6}>
+          <ChartCard title="Total Users">
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <RechartsTooltip />
+                <Line 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#6366f1" 
+                  dot={{ fill: '#6366f1', cursor: 'default' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid.Col>
+
+        <Grid.Col span={6}>
+          <ChartCard title="Received Payments">
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={receivedPaymentsData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <RechartsTooltip />
+                <Bar 
+                  dataKey="value" 
+                  fill="#6366f1" 
+                  style={{ cursor: 'pointer' }}
+                  onClick={(data) => handleChartPointClick("Received Payments", data)}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid.Col>
+
+        <Grid.Col span={6}>
+          <ChartCard title="Assigned Seats">
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={assignedSeatsData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <RechartsTooltip />
+                <Line 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#6366f1" 
+                  dot={{ fill: '#6366f1', cursor: 'pointer' }}
+                  activeDot={{ r: 4, fill: '#6366f1' }}
+                  onClick={(data) => handleChartPointClick("Assigned Seats", data)}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid.Col>
+      </Grid>
+
+      {/* Add drill-down modal */}
+      {drillDownModalOpen && drillDownData && (
+        <Modal 
+          opened={drillDownModalOpen}
+          onClose={() => setDrillDownModalOpen(false)}
+          title={drillDownData.title}
+          size="xl"
+        >
+          <Box mb="md">
+            <Group justify="space-between">
+              <Group>
+                <ActionIcon variant="light" size="md">
+                  <IconFilter size={16} />
+                </ActionIcon>
+                <Button variant="subtle" size="xs">Clear Filters</Button>
+              </Group>
+              <Text size="sm" c="dimmed">{drillDownData.results.length} results</Text>
+            </Group>
+          </Box>
+
+          {drillDownData.title === "Invoiced Amount" && (
+            <>
+              <Table striped withTableBorder>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Invoice Number</Table.Th>
+                    <Table.Th>Company Name</Table.Th>
+                    <Table.Th>Invoice Due Date</Table.Th>
+                    <Table.Th>Balance Due (in $)</Table.Th>
+                    <Table.Th>Is Refund</Table.Th>
+                    <Table.Th>Status</Table.Th>
+                    <Table.Th>Total (in $)</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {drillDownData.results.slice(0, 10).map((invoice, index) => (
+                    <Table.Tr key={index}>
+                      <Table.Td>{invoice.invoiceNumber}</Table.Td>
+                      <Table.Td>{invoice.companyName}</Table.Td>
+                      <Table.Td>{invoice.dueDate}</Table.Td>
+                      <Table.Td>{invoice.balanceDue}</Table.Td>
+                      <Table.Td>{invoice.isRefund}</Table.Td>
+                      <Table.Td>{invoice.status}</Table.Td>
+                      <Table.Td>{invoice.total}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+              <Group justify="space-between" mt="md">
+                <Text size="sm">Rows per page: 10</Text>
+                <Group>
+                  <Text size="sm">1-10 of {drillDownData.results.length}</Text>
+                  <ActionIcon variant="subtle" disabled><IconChevronLeft size={16} /></ActionIcon>
+                  <ActionIcon variant="subtle"><IconChevronRight size={16} /></ActionIcon>
+                </Group>
+              </Group>
+            </>
+          )}
+
+          {drillDownData.title === "Received Payments" && (
+            <>
+              <Table striped withTableBorder>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Payment ID</Table.Th>
+                    <Table.Th>Company</Table.Th>
+                    <Table.Th>Payment Date</Table.Th>
+                    <Table.Th>Amount</Table.Th>
+                    <Table.Th>Method</Table.Th>
+                    <Table.Th>Status</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {drillDownData.results.slice(0, 10).map((payment, index) => (
+                    <Table.Tr key={index}>
+                      <Table.Td>{payment.paymentId}</Table.Td>
+                      <Table.Td>{payment.companyName}</Table.Td>
+                      <Table.Td>{payment.paymentDate}</Table.Td>
+                      <Table.Td>${payment.amount}</Table.Td>
+                      <Table.Td>{payment.method}</Table.Td>
+                      <Table.Td>{payment.status}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+              <Group justify="space-between" mt="md">
+                <Text size="sm">Rows per page: 10</Text>
+                <Group>
+                  <Text size="sm">1-10 of {drillDownData.results.length}</Text>
+                  <ActionIcon variant="subtle" disabled><IconChevronLeft size={16} /></ActionIcon>
+                  <ActionIcon variant="subtle"><IconChevronRight size={16} /></ActionIcon>
+                </Group>
+              </Group>
+            </>
+          )}
+
+          {drillDownData.title !== "Invoiced Amount" && drillDownData.title !== "Received Payments" && (
+            <>
+              <Table striped withTableBorder>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>ID</Table.Th>
+                    <Table.Th>Name</Table.Th>
+                    <Table.Th>Date</Table.Th>
+                    <Table.Th>Value</Table.Th>
+                    <Table.Th>Category</Table.Th>
+                    <Table.Th>Status</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {drillDownData.results.slice(0, 10).map((item, index) => (
+                    <Table.Tr key={index}>
+                      <Table.Td>{item.id}</Table.Td>
+                      <Table.Td>{item.name}</Table.Td>
+                      <Table.Td>{item.date}</Table.Td>
+                      <Table.Td>${item.value}</Table.Td>
+                      <Table.Td>{item.category}</Table.Td>
+                      <Table.Td>{item.status}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+              <Group justify="space-between" mt="md">
+                <Text size="sm">Rows per page: 10</Text>
+                <Group>
+                  <Text size="sm">1-10 of {drillDownData.results.length}</Text>
+                  <ActionIcon variant="subtle" disabled><IconChevronLeft size={16} /></ActionIcon>
+                  <ActionIcon variant="subtle"><IconChevronRight size={16} /></ActionIcon>
+                </Group>
+              </Group>
+            </>
+          )}
+        </Modal>
+      )}
+    </Box>
+  );
+};
 
 export default AppInsightsAIFlow; 
