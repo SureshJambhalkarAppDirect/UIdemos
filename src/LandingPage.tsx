@@ -35,6 +35,11 @@ const LandingPage: React.FC = () => {
       id: 'adobe-new-functionalities',
       demo: 'Adobe New Functionalities Tester',
       color: '#22c55e' // Success green from design system
+    },
+    {
+      id: 'adobe-discounts',
+      demo: 'Adobe Discounts',
+      color: '#ea580c' // Professional orange for discounts theme
     }
   ];
 
