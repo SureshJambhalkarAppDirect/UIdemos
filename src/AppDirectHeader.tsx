@@ -18,7 +18,11 @@ import {
   IconChevronDown
 } from '@tabler/icons-react';
 
-const AppDirectHeader = () => {
+interface AppDirectHeaderProps {
+  onCartClick?: () => void;
+}
+
+const AppDirectHeader: React.FC<AppDirectHeaderProps> = ({ onCartClick }) => {
   return (
     <Box bg="#3c3c3c" style={{ height: '60px', position: 'sticky', top: 0, zIndex: 1000 }}>
       <Group h="100%" px="md" justify="space-between">
@@ -110,7 +114,13 @@ const AppDirectHeader = () => {
           </Menu>
 
           {/* Cart */}
-          <ActionIcon variant="subtle" size="lg" color="white">
+          <ActionIcon 
+            variant="subtle" 
+            size="lg" 
+            color="white"
+            onClick={onCartClick}
+            style={{ cursor: onCartClick ? 'pointer' : 'default' }}
+          >
             <IconShoppingCart size={20} />
           </ActionIcon>
         </Group>

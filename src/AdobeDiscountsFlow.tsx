@@ -18,10 +18,12 @@ import {
   Table,
   Badge,
   Pagination,
-  Checkbox
+  Checkbox,
+  Switch,
+  NumberInput
 } from '@mantine/core';
 
-import { IconDots, IconSearch, IconFilter, IconMaximize, IconList, IconChevronDown } from '@tabler/icons-react';
+import { IconDots, IconSearch, IconFilter, IconMaximize, IconList, IconChevronDown, IconPencil, IconCheck, IconX, IconPlus, IconMinus } from '@tabler/icons-react';
 import AppDirectHeader from './AppDirectHeader';
 import AppDirectSecondaryNav from './AppDirectSecondaryNav';
 
@@ -35,7 +37,26 @@ const AdobeDiscountsFlow: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessageText, setSuccessMessageText] = useState('');
+  const [showErrorMessage, setShowErrorMessage] = useState(false);
+  const [errorMessageText, setErrorMessageText] = useState('');
+  const [conflictingRows, setConflictingRows] = useState<Set<number>>(new Set());
   const [createdDiscounts, setCreatedDiscounts] = useState<any[]>([]);
+  const [editingRow, setEditingRow] = useState<number | null>(null);
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [editFormData, setEditFormData] = useState<any>({});
+  const [showEditSuccess, setShowEditSuccess] = useState(false);
+  const [savedDiscountCode, setSavedDiscountCode] = useState('');
+
+  // All existing discounts (sample data + previously created)
+  const existingDiscounts = [
+    { code: 'BLACK FRIDAY', application: 'Adobe Acrobat Pro for Teams (NA)' },
+    { code: '', application: 'Adobe Acrobat Pro for Teams (NA)' }, // Auto-apply discount
+    { code: 'AZURE_SL_4DEC', application: 'Azure Plan' },
+    { code: 'Azure_SL_10', application: 'Azure Plan' },
+    { code: 'mu product sp', application: '' },
+    ...createdDiscounts.map(d => ({ code: d.code, application: d.application }))
+  ];
 
   const vendors = [
     { name: 'Google', logo: 'G', color: '#4285f4', status: 'active' as const, actionType: 'edit' as const },
@@ -55,15 +76,16 @@ const AdobeDiscountsFlow: React.FC = () => {
       description: "Creative Cloud Team Discount",
       startDate: "2024-01-01",
       expirationDate: "2024-12-31", 
-      nbBillingCycles: "12",
+      nbBillingCycles: "1",
       redemptionRestriction: "None",
-      maxRedemptions: "100",
+      maxRedemptions: "",
       retainable: "Yes",
       appdirectShare: "15%",
       vendorShare: "70%",
       partnerShare: "15%",
       discountType: "Percentage",
-      discount: "15%",
+      discount: "10%",
+      application: "Creative Cloud All Apps",
       editionPricingUuid: "uuid-ep-001",
       editionUuid: "uuid-ed-001",
       applicationUuid: "uuid-app-001",
@@ -79,19 +101,66 @@ const AdobeDiscountsFlow: React.FC = () => {
       expirationDate: "2024-11-30",
       nbBillingCycles: "1",
       redemptionRestriction: "Enterprise Only",
-      maxRedemptions: "50",
+      maxRedemptions: "",
       retainable: "No",
       appdirectShare: "10%",
       vendorShare: "80%",
       partnerShare: "10%",
-      discountType: "Fixed",
+      discountType: "Fixed price",
       discount: "$25",
+      application: "Adobe Acrobat Pro DC",
       editionPricingUuid: "uuid-ep-002",
       editionUuid: "uuid-ed-002",
       applicationUuid: "uuid-app-002",
       unit: "License",
       minUnit: "10",
       maxUnit: "500"
+    },
+    {
+      code: "PHOTOSHOP_EDU_2024",
+      autoApply: "No",
+      description: "Photoshop Education Discount",
+      startDate: "2024-03-01",
+      expirationDate: "2024-08-31",
+      nbBillingCycles: "1",
+      redemptionRestriction: "Education Only",
+      maxRedemptions: "",
+      retainable: "Yes",
+      appdirectShare: "12%",
+      vendorShare: "75%",
+      partnerShare: "13%",
+      discountType: "Percentage",
+      discount: "10%",
+      application: "Adobe Photoshop",
+      editionPricingUuid: "uuid-ep-003",
+      editionUuid: "uuid-ed-003",
+      applicationUuid: "uuid-app-003",
+      unit: "User",
+      minUnit: "1",
+      maxUnit: "100"
+    },
+    {
+      code: "ILLUSTRATOR_TEAM_BUNDLE",
+      autoApply: "Yes",
+      description: "Illustrator Team Bundle Discount",
+      startDate: "2024-01-15",
+      expirationDate: "2024-12-15",
+      nbBillingCycles: "1",
+      redemptionRestriction: "None",
+      maxRedemptions: "",
+      retainable: "Yes",
+      appdirectShare: "15%",
+      vendorShare: "70%",
+      partnerShare: "15%",
+      discountType: "Fixed price",
+      discount: "$15",
+      application: "Adobe Illustrator",
+      editionPricingUuid: "uuid-ep-004",
+      editionUuid: "uuid-ed-004",
+      applicationUuid: "uuid-app-004",
+      unit: "User",
+      minUnit: "3",
+      maxUnit: "50"
     }
   ]);
 
@@ -104,20 +173,106 @@ const AdobeDiscountsFlow: React.FC = () => {
 
   // Handle create discounts
   const handleCreateDiscounts = () => {
-    // Convert selected rows to created discounts
-    const newDiscounts = discountData
+    // Convert selected rows to potential new discounts
+    const selectedDiscounts = discountData
       .filter((_, index) => selectedRows.size === 0 || selectedRows.has(index))
       .map(discount => ({
         code: discount.code,
-        application: discount.description,
+        application: discount.application,
         redemptions: parseInt(discount.maxRedemptions || '0'),
         startDate: discount.startDate,
         endDate: discount.expirationDate,
-        discount: discount.discount
+        discount: discount.discount,
+        autoApply: discount.autoApply,
+        discountType: discount.discountType
       }));
+
+    // Check for duplicates within the selected discounts themselves
+    const seenCombinations = new Set<string>();
+    const internalDuplicates: Array<{discount: typeof selectedDiscounts[0], index: number}> = [];
     
-    setCreatedDiscounts(prev => [...prev, ...newDiscounts]);
+    selectedDiscounts.forEach((discount, index) => {
+      const combination = `${discount.code}|${discount.application}`;
+      
+      if (seenCombinations.has(combination)) {
+        internalDuplicates.push({discount, index});
+      } else {
+        seenCombinations.add(combination);
+      }
+    });
+    
+    // Check for duplicates against ALL existing discounts (sample data + created)
+    const externalConflicts: Array<{discount: typeof selectedDiscounts[0], index: number, existing: any}> = [];
+    
+    selectedDiscounts.forEach((discount, index) => {
+      const conflict = existingDiscounts.find(existing => {
+        // For auto-apply discounts, only check application
+        if (discount.autoApply === 'Yes') {
+          return existing.application === discount.application;
+        }
+        // For manual discounts, check code + application
+        return existing.code === discount.code && existing.application === discount.application;
+      });
+      
+      if (conflict) {
+        externalConflicts.push({discount, index, existing: conflict});
+      }
+    });
+    
+    // Combine all conflicts
+    const allConflicts = [...internalDuplicates, ...externalConflicts];
+    
+    if (allConflicts.length > 0) {
+      // Mark conflicting rows for visual highlighting
+      const conflictIndexes = new Set(allConflicts.map(c => c.index));
+      setConflictingRows(conflictIndexes);
+      
+      // Generate specific error message
+      const conflictDetails = allConflicts.slice(0, 3).map(conflict => {
+        if ('existing' in conflict) {
+          // External conflict
+          return conflict.discount.autoApply === 'Yes' 
+            ? `Auto-apply discount for ${conflict.discount.application} already exists`
+            : `${conflict.discount.code} for ${conflict.discount.application} already exists`;
+        } else {
+          // Internal duplicate
+          return `${conflict.discount.code} for ${conflict.discount.application} selected multiple times`;
+        }
+      });
+      
+      const totalConflicts = allConflicts.length;
+      const showMore = totalConflicts > 3 ? ` (+${totalConflicts - 3} more)` : '';
+      
+      setErrorMessageText(
+        `${totalConflicts} conflict${totalConflicts > 1 ? 's' : ''} found:\n` +
+        conflictDetails.join('\n') + showMore +
+        '\n\nDeselect conflicting discounts to continue.'
+      );
+      
+      setShowErrorMessage(true);
+      
+      // Hide error message after 8 seconds (longer for more complex message)
+      setTimeout(() => {
+        setShowErrorMessage(false);
+        setConflictingRows(new Set()); // Clear visual highlights
+      }, 8000);
+      
+      return; // Don't proceed with creation
+    }
+    
+    // Clear any previous conflict highlights
+    setConflictingRows(new Set());
+    
+    // All selected discounts are valid - proceed with creation
+    setCreatedDiscounts(prev => [...prev, ...selectedDiscounts]);
+    const messageText = selectedRows.size === 0 
+      ? `Successfully started creating all ${selectedDiscounts.length} discount(s) and redirecting to the Discounts page.`
+      : `Successfully started creating ${selectedDiscounts.length} discount(s) and redirecting to the Discounts page.`;
+    setSuccessMessageText(messageText);
     setShowSuccessMessage(true);
+    
+    // Clear selected rows
+    setSelectedRows(new Set());
     
     // Redirect after showing success message
     setTimeout(() => {
@@ -130,6 +285,117 @@ const AdobeDiscountsFlow: React.FC = () => {
   const handleCancel = () => {
     setCurrentView('main');
   };
+
+  // Handle row editing
+  const handleEditRow = (index: number) => {
+    setEditingRow(index);
+    setEditFormData({ 
+      ...discountData[index],
+      // Ensure defaults are set for editing
+      maxRedemptions: discountData[index].maxRedemptions || '',
+      discount: discountData[index].discount || (discountData[index].discountType === 'Fixed price' ? '$25' : '10%')
+    });
+  };
+
+  const handleSaveEdit = () => {
+    if (editingRow !== null) {
+      const originalRow = discountData[editingRow];
+      
+      // Check if any editable fields actually changed
+      const hasChanges = (
+        originalRow.autoApply !== editFormData.autoApply ||
+        originalRow.startDate !== editFormData.startDate ||
+        originalRow.maxRedemptions !== editFormData.maxRedemptions ||
+        originalRow.discount !== editFormData.discount
+      );
+      
+      const newData = [...discountData];
+      newData[editingRow] = editFormData;
+      setDiscountData(newData);
+      setEditingRow(null);
+      setEditFormData({});
+      
+      // Only show success feedback if something actually changed
+      if (hasChanges) {
+        setSavedDiscountCode(editFormData.code);
+        setShowEditSuccess(true);
+        setTimeout(() => setShowEditSuccess(false), 3000);
+      }
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRow(null);
+    setEditFormData({});
+  };
+
+  // Function to add a duplicate row for testing (triggered by cart icon)
+  const handleAddTestDuplicate = () => {
+    // Only work on the "Get Discounts" page
+    if (currentView !== 'discounts') return;
+    
+    if (discountData.length > 0) {
+      const lastRow = discountData[discountData.length - 1];
+      
+      // Generate random discount value
+      const randomDiscount = lastRow.discountType === 'Fixed price' 
+        ? `$${(Math.random() * 50 + 10).toFixed(0)}` // Random $10-$60
+        : `${(Math.random() * 30 + 5).toFixed(0)}%`; // Random 5%-35%
+      
+      // Create duplicate with random discount
+      const duplicateRow = {
+        ...lastRow,
+        discount: randomDiscount
+      };
+      
+      setDiscountData(prev => [...prev, duplicateRow]);
+    }
+  };
+
+  const handleEditFieldChange = (field: string, value: any) => {
+    setEditFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Handle keyboard shortcuts and click outside
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (editingRow !== null) {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          handleSaveEdit();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          handleCancelEdit();
+        }
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (editingRow !== null) {
+        const target = e.target as HTMLElement;
+        
+        // Find the closest table row
+        const closestRow = target.closest('tr');
+        const editingRowElement = document.querySelector(`tr[data-editing-row="${editingRow}"]`);
+        
+        // If we didn't click on the editing row or its children, auto-save (Apple-style UX)
+        if (closestRow !== editingRowElement) {
+          handleSaveEdit();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [editingRow, editFormData, handleSaveEdit, handleCancelEdit]);
 
   // Settings Sidebar Component
   const SettingsSidebar = () => {
@@ -575,7 +841,7 @@ const AdobeDiscountsFlow: React.FC = () => {
           
           {/* Sub-heading */}
           <Text size="sm" c="#6b7280" mb="xl">
-            Access and manage discount opportunities for your Adobe integrations and partnerships.
+            Access and create Adobe discounts.
           </Text>
           
           {/* Combined Filters, Search and Data Table */}
@@ -671,6 +937,23 @@ const AdobeDiscountsFlow: React.FC = () => {
               </Box>
             )}
             
+            {/* Editing Help Text */}
+            {editingRow !== null && (
+              <Box
+                style={{
+                  backgroundColor: '#f0f9ff',
+                  border: '1px solid #bae6fd',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  marginBottom: '16px'
+                }}
+              >
+                <Text size="xs" c="#0369a1">
+                  ✏️ <strong>Editing {discountData[editingRow]?.code}:</strong> Press <kbd style={{ backgroundColor: '#e0e7ff', padding: '2px 4px', borderRadius: '3px', fontSize: '10px' }}>⌘ + Enter</kbd> to save, <kbd style={{ backgroundColor: '#e0e7ff', padding: '2px 4px', borderRadius: '3px', fontSize: '10px' }}>Esc</kbd> to cancel, or <kbd style={{ backgroundColor: '#e0e7ff', padding: '2px 4px', borderRadius: '3px', fontSize: '10px' }}>Tab</kbd> to navigate between fields
+                </Text>
+              </Box>
+            )}
+
             {/* Data Table Section */}
             <Box 
               style={{ 
@@ -680,131 +963,327 @@ const AdobeDiscountsFlow: React.FC = () => {
                 width: '100%'
               }}
             >
-              <Table striped highlightOnHover style={{ minWidth: '2400px', tableLayout: 'fixed' }}>
+                                <Table striped highlightOnHover style={{ minWidth: '1340px', tableLayout: 'fixed' }}>
                 <Table.Thead>
                   <Table.Tr style={{ backgroundColor: '#f8f9fa' }}>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '50px' }}>
-                      <Checkbox 
-                        onChange={(e) => {
-                          if (e.currentTarget.checked) {
-                            setSelectedRows(new Set(discountData.map((_, index) => index)));
-                          } else {
-                            setSelectedRows(new Set());
-                          }
-                        }}
-                        checked={selectedRows.size === discountData.length && discountData.length > 0}
-                        style={{ cursor: 'pointer' }}
-                      />
-                    </Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '140px' }}>Code</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '100px' }}>Auto Apply</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '200px' }}>Description</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '120px' }}>Start Date</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '120px' }}>Expiration Date</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '130px' }}>Nb Billing Cycles</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '150px' }}>Redemption Restriction</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '130px' }}>Max Redemptions</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '100px' }}>Retainable</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '120px' }}>Appdirect Share</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '110px' }}>Vendor Share</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '110px' }}>Partner Share</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '120px' }}>Discount Type</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '100px' }}>Discount</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '150px' }}>Edition Pricing Uuid</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '120px' }}>Edition Uuid</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '140px' }}>Application Uuid</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '80px' }}>Unit</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '80px' }}>Min Unit</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '80px' }}>Max Unit</Table.Th>
-                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '50px' }}>
-                      <IconDots size={16} />
-                    </Table.Th>
+                                                                    <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', width: '40px' }}>
+                          <Checkbox 
+                            onChange={(e) => {
+                              if (e.currentTarget.checked) {
+                                setSelectedRows(new Set(discountData.map((_, index) => index)));
+                              } else {
+                                setSelectedRows(new Set());
+                              }
+                            }}
+                            checked={selectedRows.size === discountData.length && discountData.length > 0}
+                            style={{ cursor: 'pointer' }}
+                          />
+                        </Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', width: '200px' }}>Code</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', width: '100px' }}>Auto Apply</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', width: '200px' }}>Description</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', width: '140px' }}>Start Date</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', width: '140px' }}>Expiration Date</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', width: '130px', display: 'none' }}># of Billing Cycles</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', width: '100px' }}>Max Redemptions</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', width: '120px' }}>Discount Type</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', width: '100px' }}>Discount</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', width: '200px' }}>Application</Table.Th>
+                        
+                        {/* Hidden Columns */}
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '150px', display: 'none' }}>Redemption Restriction</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '100px', display: 'none' }}>Retainable</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '120px', display: 'none' }}>Appdirect Share</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '110px', display: 'none' }}>Vendor Share</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '110px', display: 'none' }}>Partner Share</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '150px', display: 'none' }}>Edition Pricing Uuid</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '120px', display: 'none' }}>Edition Uuid</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '140px', display: 'none' }}>Application Uuid</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '80px', display: 'none' }}>Unit</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '80px', display: 'none' }}>Min Unit</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '80px', display: 'none' }}>Max Unit</Table.Th>
+                        <Table.Th style={{ fontWeight: 600, color: '#374151', fontSize: '14px', minWidth: '50px', display: 'none' }}>
+                          <IconDots size={16} />
+                        </Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {discountData.map((row, index) => (
-                    <Table.Tr key={index} style={{
-                      backgroundColor: selectedRows.has(index) ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
-                    }}>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
-                        <Checkbox 
-                          checked={selectedRows.has(index)}
-                          onChange={(e) => {
-                            const newSelected = new Set(selectedRows);
-                            if (e.currentTarget.checked) {
-                              newSelected.add(index);
-                            } else {
-                              newSelected.delete(index);
-                            }
-                            setSelectedRows(newSelected);
-                          }}
-                          style={{ cursor: 'pointer' }}
-                        />
-                      </Table.Td>
-                      <Table.Td style={{ 
-                        fontSize: '14px', 
-                        color: '#374151',
-                        wordWrap: 'break-word',
-                        whiteSpace: 'normal',
-                        lineHeight: '1.4'
-                      }}>
-                        {row.code}
-                      </Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
-                        <Badge 
-                          variant="outline" 
-                          color={row.autoApply === 'Yes' ? 'green' : 'gray'}
-                          size="xs"
-                        >
-                          {row.autoApply}
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>{row.description}</Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>{row.startDate}</Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>{row.expirationDate}</Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>{row.nbBillingCycles}</Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>{row.redemptionRestriction}</Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>{row.maxRedemptions}</Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>{row.retainable}</Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>{row.appdirectShare}</Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>{row.vendorShare}</Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>{row.partnerShare}</Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>{row.discountType}</Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151', fontWeight: 600 }}>{row.discount}</Table.Td>
-                      <Table.Td style={{ 
-                        fontSize: '14px', 
-                        color: '#374151',
-                        wordWrap: 'break-word',
-                        whiteSpace: 'normal'
-                      }}>
-                        {row.editionPricingUuid}
-                      </Table.Td>
-                      <Table.Td style={{ 
-                        fontSize: '14px', 
-                        color: '#374151',
-                        wordWrap: 'break-word',
-                        whiteSpace: 'normal'
-                      }}>
-                        {row.editionUuid}
-                      </Table.Td>
-                      <Table.Td style={{ 
-                        fontSize: '14px', 
-                        color: '#374151',
-                        wordWrap: 'break-word',
-                        whiteSpace: 'normal'
-                      }}>
-                        {row.applicationUuid}
-                      </Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>{row.unit}</Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>{row.minUnit}</Table.Td>
-                      <Table.Td style={{ fontSize: '14px', color: '#374151' }}>{row.maxUnit}</Table.Td>
-                      <Table.Td>
-                        <ActionIcon variant="subtle" color="gray" size="sm">
-                          <IconDots size={16} />
-                        </ActionIcon>
-                      </Table.Td>
-                    </Table.Tr>
-                  ))}
+                  {discountData.map((row, index) => {
+                    const isEditing = editingRow === index;
+                    const isSelected = selectedRows.has(index);
+                    const isHovered = hoveredRow === index;
+                    
+                    return (
+                      <Table.Tr 
+                        key={index} 
+                        data-editing-row={isEditing ? index : undefined}
+                        onMouseEnter={() => setHoveredRow(index)}
+                        onMouseLeave={() => setHoveredRow(null)}
+                        style={{
+                          backgroundColor: conflictingRows.has(index)
+                            ? '#fef2f2' // Light red for conflicts
+                            : isSelected 
+                              ? 'rgba(59, 130, 246, 0.1)' 
+                              : isEditing 
+                              ? 'rgba(8, 145, 178, 0.05)'
+                              : 'transparent',
+                          borderLeft: conflictingRows.has(index) 
+                            ? '3px solid #dc2626' // Red border for conflicts
+                            : isEditing ? '3px solid #0891b2' : '3px solid transparent',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
+                          <Checkbox 
+                            checked={isSelected}
+                            onChange={(e) => {
+                              const newSelected = new Set(selectedRows);
+                              if (e.currentTarget.checked) {
+                                newSelected.add(index);
+                              } else {
+                                newSelected.delete(index);
+                              }
+                              setSelectedRows(newSelected);
+                            }}
+                            style={{ cursor: 'pointer' }}
+                          />
+                        </Table.Td>
+                                                <Table.Td style={{ 
+                          fontSize: '14px', 
+                          color: '#374151', 
+                          wordWrap: 'break-word',
+                          whiteSpace: 'normal',
+                          lineHeight: '1.4'
+                        }}>
+                          {row.code}
+                        </Table.Td>
+                        
+                        {/* Auto Apply - Editable */}
+                        <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
+                          {isEditing ? (
+                            <Switch
+                              checked={editFormData.autoApply === 'Yes'}
+                              onChange={(e) => handleEditFieldChange('autoApply', e.currentTarget.checked ? 'Yes' : 'No')}
+                              size="sm"
+                              color="teal"
+                            />
+                          ) : (
+                            <Box
+                              style={{
+                                cursor: 'pointer',
+                                borderBottom: isHovered ? '1px dotted #0891b2' : '1px dotted transparent',
+                                transition: 'border-color 0.2s ease',
+                                display: 'inline-block'
+                              }}
+                              onClick={() => handleEditRow(index)}
+                            >
+                              {row.autoApply}
+                            </Box>
+                          )}
+                        </Table.Td>
+                        
+                        <Table.Td style={{ 
+                          fontSize: '14px', 
+                          color: '#374151',
+                          wordWrap: 'break-word',
+                          whiteSpace: 'normal',
+                          lineHeight: '1.4'
+                        }}>
+                          {row.description}
+                        </Table.Td>
+                        
+                        {/* Start Date - Editable with validation */}
+                        <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
+                          {isEditing ? (
+                            <TextInput
+                              type="date"
+                              value={editFormData.startDate || ''}
+                              onChange={(e) => handleEditFieldChange('startDate', e.currentTarget.value)}
+                              min={row.startDate} // Can't choose date before original
+                              size="xs"
+                              styles={{
+                                input: { 
+                                  fontSize: '14px',
+                                  padding: '4px 8px'
+                                }
+                              }}
+                            />
+                          ) : (
+                            <Box
+                              style={{
+                                cursor: 'pointer',
+                                borderBottom: isHovered ? '1px dotted #0891b2' : '1px dotted transparent',
+                                transition: 'border-color 0.2s ease'
+                              }}
+                              onClick={() => handleEditRow(index)}
+                            >
+                              {row.startDate}
+                            </Box>
+                          )}
+                        </Table.Td>
+                        
+                        <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
+                          {row.expirationDate}
+                        </Table.Td>
+                        
+                        {/* Billing Cycles - Non-editable */}
+                        <Table.Td style={{ fontSize: '14px', color: '#374151', display: 'none' }}>
+                          {row.nbBillingCycles}
+                        </Table.Td>
+                        
+                        {/* Max Redemptions - Editable */}
+                        <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
+                          {isEditing ? (
+                            <TextInput
+                              type="number"
+                              value={editFormData.maxRedemptions === 0 ? '' : editFormData.maxRedemptions || ''}
+                              onChange={(e) => {
+                                const value = e.currentTarget.value;
+                                // Only allow positive whole numbers, treat empty/0 as blank
+                                if (value === '' || (Number(value) >= 0 && Number.isInteger(Number(value)))) {
+                                  handleEditFieldChange('maxRedemptions', value === '' || value === '0' ? '' : value);
+                                }
+                              }}
+                              min="0"
+                              step="1"
+                              size="xs"
+                              placeholder="Leave blank"
+                              styles={{
+                                input: { 
+                                  fontSize: '14px',
+                                  padding: '4px 8px'
+                                }
+                              }}
+                            />
+                          ) : (
+                            <Box
+                              style={{
+                                cursor: 'pointer',
+                                borderBottom: isHovered ? '1px dotted #0891b2' : '1px dotted transparent',
+                                transition: 'border-color 0.2s ease'
+                              }}
+                              onClick={() => handleEditRow(index)}
+                            >
+                              {row.maxRedemptions && row.maxRedemptions !== '0' ? row.maxRedemptions : '-'}
+                            </Box>
+                          )}
+                        </Table.Td>
+
+                        {/* Discount Type - Non-editable */}
+                        <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
+                          {row.discountType}
+                        </Table.Td>
+                        
+                        {/* Discount - Editable with smart placeholder */}
+                        <Table.Td style={{ fontSize: '14px', color: '#374151', fontWeight: 600 }}>
+                          {isEditing ? (
+                            <TextInput
+                              value={editFormData.discount || (row.discountType === 'Fixed price' ? '$25' : '10%')}
+                              onChange={(e) => handleEditFieldChange('discount', e.currentTarget.value)}
+                              size="xs"
+                              placeholder={row.discountType === 'Fixed price' ? '$25' : '10%'}
+                              styles={{
+                                input: { 
+                                  fontSize: '14px',
+                                  padding: '4px 8px',
+                                  fontWeight: 600
+                                }
+                              }}
+                            />
+                          ) : (
+                            <Box
+                              style={{
+                                cursor: 'pointer',
+                                borderBottom: isHovered ? '1px dotted #0891b2' : '1px dotted transparent',
+                                transition: 'border-color 0.2s ease'
+                              }}
+                              onClick={() => handleEditRow(index)}
+                            >
+                              {row.discount}
+                            </Box>
+                          )}
+                        </Table.Td>
+
+                        {/* Application */}
+                        <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
+                          {row.application}
+                        </Table.Td>
+                        
+                        {/* Hidden Columns */}
+                        <Table.Td style={{ fontSize: '14px', color: '#374151', display: 'none' }}>{row.redemptionRestriction}</Table.Td>
+                        <Table.Td style={{ fontSize: '14px', color: '#374151', display: 'none' }}>{row.retainable}</Table.Td>
+                        <Table.Td style={{ fontSize: '14px', color: '#374151', display: 'none' }}>{row.appdirectShare}</Table.Td>
+                        <Table.Td style={{ fontSize: '14px', color: '#374151', display: 'none' }}>{row.vendorShare}</Table.Td>
+                        <Table.Td style={{ fontSize: '14px', color: '#374151', display: 'none' }}>{row.partnerShare}</Table.Td>
+                        <Table.Td style={{ fontSize: '14px', color: '#374151', wordWrap: 'break-word', whiteSpace: 'normal', display: 'none' }}>{row.editionPricingUuid}</Table.Td>
+                        <Table.Td style={{ fontSize: '14px', color: '#374151', wordWrap: 'break-word', whiteSpace: 'normal', display: 'none' }}>{row.editionUuid}</Table.Td>
+                        <Table.Td style={{ fontSize: '14px', color: '#374151', wordWrap: 'break-word', whiteSpace: 'normal', display: 'none' }}>{row.applicationUuid}</Table.Td>
+                        <Table.Td style={{ fontSize: '14px', color: '#374151', display: 'none' }}>{row.unit}</Table.Td>
+                        <Table.Td style={{ fontSize: '14px', color: '#374151', display: 'none' }}>{row.minUnit}</Table.Td>
+                        <Table.Td style={{ fontSize: '14px', color: '#374151', display: 'none' }}>{row.maxUnit}</Table.Td>
+                        
+                        {/* Hidden Dots Column */}
+                        <Table.Td style={{ display: 'none' }}>
+                          <ActionIcon variant="subtle" color="gray" size="sm">
+                            <IconDots size={16} />
+                          </ActionIcon>
+                        </Table.Td>
+                        
+                        {/* Actions Column */}
+                        <Table.Td style={{ position: 'relative' }}>
+                          {isEditing ? (
+                            <Group gap="xs">
+                              <ActionIcon
+                                variant="subtle"
+                                color="teal"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleSaveEdit();
+                                }}
+                                style={{
+                                  transition: 'transform 0.1s ease',
+                                  '&:active': { transform: 'scale(0.97)' }
+                                }}
+                              >
+                                <IconCheck size={16} />
+                              </ActionIcon>
+                              <ActionIcon
+                                variant="subtle"
+                                color="gray"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleCancelEdit();
+                                }}
+                                style={{
+                                  transition: 'transform 0.1s ease',
+                                  '&:active': { transform: 'scale(0.97)' }
+                                }}
+                              >
+                                <IconX size={16} />
+                              </ActionIcon>
+                            </Group>
+                          ) : (
+                            <ActionIcon 
+                              variant="subtle" 
+                              color="gray" 
+                              size="sm"
+                              style={{
+                                opacity: isHovered ? 1 : 0.3,
+                                transition: 'opacity 0.2s ease'
+                              }}
+                              onClick={() => handleEditRow(index)}
+                            >
+                              <IconPencil size={14} />
+                            </ActionIcon>
+                          )}
+                        </Table.Td>
+                      </Table.Tr>
+                    );
+                  })}
                 </Table.Tbody>
               </Table>
             </Box>
@@ -828,35 +1307,97 @@ const AdobeDiscountsFlow: React.FC = () => {
             </Group>
           </Card>
           
-          {/* Success Message */}
-          {showSuccessMessage && (
-            <Box
-              style={{
-                backgroundColor: '#d1fae5',
-                border: '1px solid #a7f3d0',
-                borderRadius: '8px',
-                padding: '12px 16px',
-                marginTop: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}
-            >
-              <Group gap="sm">
-                <Text size="sm" c="#065f46" fw={500}>
-                  Successfully started generating the discounts and redirecting to the history page
-                </Text>
-              </Group>
-              <ActionIcon 
-                variant="transparent" 
-                color="green"
-                size="sm"
-                onClick={() => setShowSuccessMessage(false)}
-              >
-                <Text size="lg" c="#065f46">×</Text>
-              </ActionIcon>
-            </Box>
-          )}
+                        {/* Success Messages */}
+              {showSuccessMessage && (
+                <Box
+                  style={{
+                    backgroundColor: '#d1fae5',
+                    border: '1px solid #a7f3d0',
+                    borderRadius: '8px',
+                    padding: '12px 16px',
+                    marginTop: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <Group gap="sm">
+                    <Text size="sm" c="#065f46" fw={500}>
+{successMessageText}
+                    </Text>
+                  </Group>
+                  <ActionIcon 
+                    variant="transparent" 
+                    color="green"
+                    size="sm"
+                    onClick={() => setShowSuccessMessage(false)}
+                  >
+                    <Text size="lg" c="#065f46">×</Text>
+                  </ActionIcon>
+                </Box>
+              )}
+
+              {/* Error Messages */}
+              {showErrorMessage && (
+                <Box
+                  style={{
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    borderRadius: '8px',
+                    padding: '12px 16px',
+                    marginTop: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <Group gap="sm" align="flex-start">
+                    <IconX size={16} color="#dc2626" style={{ marginTop: '2px', flexShrink: 0 }} />
+                    <Text size="sm" c="#dc2626" fw={500} style={{ whiteSpace: 'pre-line' }}>
+                      {errorMessageText}
+                    </Text>
+                  </Group>
+                  <ActionIcon 
+                    variant="transparent" 
+                    color="red"
+                    size="sm"
+                    onClick={() => setShowErrorMessage(false)}
+                  >
+                    <Text size="lg" c="#dc2626">×</Text>
+                  </ActionIcon>
+                </Box>
+              )}
+
+              {/* Edit Success Message */}
+              {showEditSuccess && (
+                <Box
+                  style={{
+                    backgroundColor: '#d1fae5',
+                    border: '1px solid #a7f3d0',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    marginTop: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <Group gap="sm">
+                    <IconCheck size={16} color="#065f46" />
+                    <Text size="sm" c="#065f46" fw={500}>
+                      Discount {savedDiscountCode} updated successfully
+                    </Text>
+                  </Group>
+                  <ActionIcon 
+                    variant="transparent" 
+                    color="green"
+                    size="sm"
+                    onClick={() => setShowEditSuccess(false)}
+                  >
+                    <Text size="lg" c="#065f46">×</Text>
+                  </ActionIcon>
+                </Box>
+              )}
 
           {/* Action Buttons */}
           <Group justify="flex-end" mt="lg" gap="sm">
@@ -867,6 +1408,24 @@ const AdobeDiscountsFlow: React.FC = () => {
             >
               Cancel
             </Button>
+            
+            {conflictingRows.size > 0 && (
+              <Button 
+                variant="outline" 
+                color="red"
+                onClick={() => {
+                  // Remove conflicting rows from selection
+                  const newSelection = new Set(selectedRows);
+                  conflictingRows.forEach(index => newSelection.delete(index));
+                  setSelectedRows(newSelection);
+                  setConflictingRows(new Set());
+                  setShowErrorMessage(false);
+                }}
+              >
+                Remove {conflictingRows.size} Conflict{conflictingRows.size > 1 ? 's' : ''}
+              </Button>
+            )}
+            
             <Button 
               bg="#0891b2"
               onClick={handleCreateDiscounts}
@@ -947,6 +1506,35 @@ const AdobeDiscountsFlow: React.FC = () => {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
+                {/* Dynamic data from our created discounts - shown at top */}
+                {createdDiscounts.map((discount, index) => (
+                  <Table.Tr key={`created-${index}`}>
+                    <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
+                      {discount.autoApply === 'Yes' ? '' : discount.code}
+                    </Table.Td>
+                    <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
+                      {discount.application}
+                    </Table.Td>
+                    <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
+                      {discount.redemptions}
+                    </Table.Td>
+                    <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
+                      {discount.startDate}
+                    </Table.Td>
+                    <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
+                      {discount.endDate}
+                    </Table.Td>
+                    <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
+                      {discount.discountType === 'Fixed price' 
+                        ? (discount.discount.startsWith('$') 
+                          ? parseFloat(discount.discount.substring(1)).toFixed(2) 
+                          : parseFloat(discount.discount).toFixed(2))
+                        : discount.discount
+                      }
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+                
                 {/* Sample existing data */}
                 <Table.Tr>
                   <Table.Td style={{ fontSize: '14px', color: '#374151' }}>BLACK FRIDAY</Table.Td>
@@ -980,30 +1568,6 @@ const AdobeDiscountsFlow: React.FC = () => {
                   <Table.Td style={{ fontSize: '14px', color: '#374151' }}></Table.Td>
                   <Table.Td style={{ fontSize: '14px', color: '#374151' }}>10%</Table.Td>
                 </Table.Tr>
-                
-                {/* Dynamic data from our created discounts */}
-                {createdDiscounts.map((discount, index) => (
-                  <Table.Tr key={`created-${index}`} style={{ backgroundColor: '#f0f9ff' }}>
-                    <Table.Td style={{ fontSize: '14px', color: '#374151', fontWeight: 600 }}>
-                      {discount.code}
-                    </Table.Td>
-                    <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
-                      {discount.application}
-                    </Table.Td>
-                    <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
-                      {discount.redemptions}
-                    </Table.Td>
-                    <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
-                      {discount.startDate}
-                    </Table.Td>
-                    <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
-                      {discount.endDate}
-                    </Table.Td>
-                    <Table.Td style={{ fontSize: '14px', color: '#374151' }}>
-                      {discount.discount}
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
                 
                 {/* More sample data */}
                 <Table.Tr>
@@ -1084,7 +1648,7 @@ const AdobeDiscountsFlow: React.FC = () => {
       </Box>
 
       {/* AppDirect Header */}
-      <AppDirectHeader />
+              <AppDirectHeader onCartClick={handleAddTestDuplicate} />
       
       {/* Secondary Navigation */}
       <AppDirectSecondaryNav activeTab={currentView === 'discounts-listing' ? 'products' : 'settings'} />
