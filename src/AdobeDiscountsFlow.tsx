@@ -29,7 +29,7 @@ import AppDirectSecondaryNav from './AppDirectSecondaryNav';
 
 const AdobeDiscountsFlow: React.FC = () => {
   const navigate = useNavigate();
-  const [currentView, setCurrentView] = useState<'main' | 'discounts' | 'discounts-listing'>('main');
+  const [currentView, setCurrentView] = useState<'main' | 'discounts' | 'discounts-listing' | 'marketplace-discounts'>('main');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [searchValue, setSearchValue] = useState('');
@@ -47,6 +47,7 @@ const AdobeDiscountsFlow: React.FC = () => {
   const [editFormData, setEditFormData] = useState<any>({});
   const [showEditSuccess, setShowEditSuccess] = useState(false);
   const [savedDiscountCode, setSavedDiscountCode] = useState('');
+  const [cartClickCount, setCartClickCount] = useState(0);
 
   // All existing discounts (sample data + previously created)
   const existingDiscounts = [
@@ -95,7 +96,7 @@ const AdobeDiscountsFlow: React.FC = () => {
     },
     {
       code: "ADOBE_ACROBAT_BULK_LICENSE_2024_ENTERPRISE",
-      autoApply: "No", 
+      autoApply: "Yes", 
       description: "Acrobat Pro Bulk License for Enterprise Customers",
       startDate: "2024-02-15",
       expirationDate: "2024-11-30",
@@ -118,7 +119,7 @@ const AdobeDiscountsFlow: React.FC = () => {
     },
     {
       code: "PHOTOSHOP_EDU_2024",
-      autoApply: "No",
+      autoApply: "Yes",
       description: "Photoshop Education Discount",
       startDate: "2024-03-01",
       expirationDate: "2024-08-31",
@@ -232,11 +233,11 @@ const AdobeDiscountsFlow: React.FC = () => {
         if ('existing' in conflict) {
           // External conflict
           return conflict.discount.autoApply === 'Yes' 
-            ? `Auto-apply discount for ${conflict.discount.application} already exists`
-            : `${conflict.discount.code} for ${conflict.discount.application} already exists`;
+            ? `Auto-apply discount for ${conflict.discount.application} already exists. You are only allowed one discount per application.`
+            : `${conflict.discount.code} for ${conflict.discount.application} already exists. You are only allowed one discount per application.`;
         } else {
           // Internal duplicate
-          return `${conflict.discount.code} for ${conflict.discount.application} selected multiple times`;
+          return `${conflict.discount.code} for ${conflict.discount.application} is present multiple times. You are only allowed one discount per application.`;
         }
       });
       
@@ -246,16 +247,10 @@ const AdobeDiscountsFlow: React.FC = () => {
       setErrorMessageText(
         `${totalConflicts} conflict${totalConflicts > 1 ? 's' : ''} found:\n` +
         conflictDetails.join('\n') + showMore +
-        '\n\nDeselect conflicting discounts to continue.'
+        '\n\nRemove conflicting discounts to continue.'
       );
       
       setShowErrorMessage(true);
-      
-      // Hide error message after 8 seconds (longer for more complex message)
-      setTimeout(() => {
-        setShowErrorMessage(false);
-        setConflictingRows(new Set()); // Clear visual highlights
-      }, 8000);
       
       return; // Don't proceed with creation
     }
@@ -283,6 +278,16 @@ const AdobeDiscountsFlow: React.FC = () => {
 
   // Handle cancel
   const handleCancel = () => {
+    setCurrentView('main');
+  };
+
+  // Handle marketplace click
+  const handleMarketplaceClick = () => {
+    setCurrentView('marketplace-discounts');
+  };
+
+  // Handle settings click
+  const handleSettingsClick = () => {
     setCurrentView('main');
   };
 
@@ -334,21 +339,60 @@ const AdobeDiscountsFlow: React.FC = () => {
     // Only work on the "Get Discounts" page
     if (currentView !== 'discounts') return;
     
-    if (discountData.length > 0) {
-      const lastRow = discountData[discountData.length - 1];
-      
-      // Generate random discount value
-      const randomDiscount = lastRow.discountType === 'Fixed price' 
-        ? `$${(Math.random() * 50 + 10).toFixed(0)}` // Random $10-$60
-        : `${(Math.random() * 30 + 5).toFixed(0)}%`; // Random 5%-35%
-      
-      // Create duplicate with random discount
-      const duplicateRow = {
-        ...lastRow,
-        discount: randomDiscount
+    setCartClickCount(prev => prev + 1);
+    
+    if (cartClickCount % 2 === 0) {
+      // First click (and odd clicks): Add BLACK FRIDAY from existing redirect page
+      const blackFridayDuplicate = {
+        code: 'BLACK FRIDAY',
+        autoApply: 'No',
+        description: 'Black Friday discount from existing page',
+        startDate: '2024-01-01',
+        expirationDate: '2024-12-31',
+        nbBillingCycles: '1',
+        redemptionRestriction: 'None',
+        maxRedemptions: '',
+        retainable: 'Yes',
+        appdirectShare: '15%',
+        vendorShare: '70%',
+        partnerShare: '15%',
+        discountType: 'Percentage',
+        discount: '15%',
+        application: 'Adobe Acrobat Pro for Teams (NA)',
+        editionPricingUuid: `uuid-ep-${Math.random().toString(36).substr(2, 6)}`,
+        editionUuid: `uuid-ed-${Math.random().toString(36).substr(2, 6)}`,
+        applicationUuid: `uuid-app-${Math.random().toString(36).substr(2, 6)}`,
+        unit: 'User',
+        minUnit: '1',
+        maxUnit: '1000'
       };
-      
-      setDiscountData(prev => [...prev, duplicateRow]);
+      setDiscountData(prev => [...prev, blackFridayDuplicate]);
+    } else {
+      // Second click (and even clicks): Add ADOBE_CREATIVE_2024 from current view
+      const adobeCreativeDuplicate = {
+        code: 'ADOBE_CREATIVE_2024',
+        autoApply: 'Yes',
+        description: 'Creative Cloud Team Discount from current view',
+        startDate: '2024-01-01',
+        expirationDate: '2024-12-31',
+        nbBillingCycles: '1',
+        redemptionRestriction: 'None',
+        maxRedemptions: '',
+        retainable: 'Yes',
+        appdirectShare: '15%',
+        vendorShare: '70%',
+        partnerShare: '15%',
+        discountType: 'Percentage',
+        discount: '10%',
+        application: 'Creative Cloud All Apps',
+        editionPricingUuid: `uuid-ep-${Math.random().toString(36).substr(2, 6)}`,
+        editionUuid: `uuid-ed-${Math.random().toString(36).substr(2, 6)}`,
+        applicationUuid: `uuid-app-${Math.random().toString(36).substr(2, 6)}`,
+        unit: 'User',
+        minUnit: '1',
+        maxUnit: '1000'
+      };
+      setDiscountData(prev => [...prev, adobeCreativeDuplicate]);
     }
   };
 
@@ -841,7 +885,7 @@ const AdobeDiscountsFlow: React.FC = () => {
           
           {/* Sub-heading */}
           <Text size="sm" c="#6b7280" mb="xl">
-            Access and create Adobe discounts.
+            Access and create Adobe discounts on the marketplace.
           </Text>
           
           {/* Combined Filters, Search and Data Table */}
@@ -1361,7 +1405,10 @@ const AdobeDiscountsFlow: React.FC = () => {
                     variant="transparent" 
                     color="red"
                     size="sm"
-                    onClick={() => setShowErrorMessage(false)}
+                    onClick={() => {
+                      setShowErrorMessage(false);
+                      setConflictingRows(new Set()); // Clear visual highlights when dismissing error
+                    }}
                   >
                     <Text size="lg" c="#dc2626">×</Text>
                   </ActionIcon>
@@ -1414,9 +1461,30 @@ const AdobeDiscountsFlow: React.FC = () => {
                 variant="outline" 
                 color="red"
                 onClick={() => {
-                  // Remove conflicting rows from selection
-                  const newSelection = new Set(selectedRows);
-                  conflictingRows.forEach(index => newSelection.delete(index));
+                  // Remove conflicting rows from the actual table data
+                  const conflictIndexesArray = Array.from(conflictingRows).sort((a, b) => b - a); // Sort descending to avoid index shifting
+                  let newDiscountData = [...discountData];
+                  
+                  // Remove rows starting from highest index to avoid shifting issues
+                  conflictIndexesArray.forEach(index => {
+                    newDiscountData.splice(index, 1);
+                  });
+                  
+                  setDiscountData(newDiscountData);
+                  
+                  // Update selected rows to account for removed indexes
+                  const newSelection = new Set<number>();
+                  selectedRows.forEach(selectedIndex => {
+                    // Calculate how many rows were removed before this selected index
+                    const removedBefore = conflictIndexesArray.filter(removedIndex => removedIndex < selectedIndex).length;
+                    const newIndex = selectedIndex - removedBefore;
+                    
+                    // Only add if this wasn't a conflicting row that got removed
+                    if (!conflictingRows.has(selectedIndex) && newIndex >= 0) {
+                      newSelection.add(newIndex);
+                    }
+                  });
+                  
                   setSelectedRows(newSelection);
                   setConflictingRows(new Set());
                   setShowErrorMessage(false);
@@ -1429,6 +1497,7 @@ const AdobeDiscountsFlow: React.FC = () => {
             <Button 
               bg="#0891b2"
               onClick={handleCreateDiscounts}
+              disabled={discountData.length === 0}
               styles={{
                 root: {
                   '&:hover': {
@@ -1633,6 +1702,126 @@ const AdobeDiscountsFlow: React.FC = () => {
       );
     }
 
+    if (currentView === 'marketplace-discounts') {
+      // Use the same structure as discounts-listing but WITHOUT created discounts
+      const sampleExistingDiscounts = [
+        { code: 'ADOBE_ACROBAT_BULK_LICENSE_2024_ENTERPRISE', application: 'Adobe Acrobat Pro DC', autoApply: 'No', startDate: '2024-02-15', endDate: '2024-11-30', redemptions: 0, discountType: 'Fixed price', discount: '25.00' },
+        { code: 'PHOTOSHOP_EDU_2024', application: 'Adobe Photoshop', autoApply: 'No', startDate: '2024-03-01', endDate: '2024-08-31', redemptions: 0, discountType: 'Percentage', discount: '10%' },
+        { code: '', application: 'Adobe Illustrator', autoApply: 'Yes', startDate: '2024-01-15', endDate: '2024-12-15', redemptions: 0, discountType: 'Fixed price', discount: '15.00' },
+        { code: 'BLACK FRIDAY', application: 'Adobe Acrobat Pro for Teams (NA)', autoApply: 'No', startDate: '10/01/25', endDate: '11/22/25', redemptions: 0, discountType: 'Fixed price', discount: '10.00' },
+        { code: '', application: 'Adobe Acrobat Pro for Teams (NA)', autoApply: 'Yes', startDate: '07/01/25', endDate: '07/30/25', redemptions: 0, discountType: 'Fixed price', discount: '10.00' },
+        { code: 'AZURE_SL_4DEC', application: 'Azure Plan', autoApply: 'No', startDate: '', endDate: '', redemptions: 1, discountType: 'Percentage', discount: '15%' },
+        { code: 'Azure_SL_10', application: 'Azure Plan', autoApply: 'No', startDate: '', endDate: '', redemptions: 1, discountType: 'Percentage', discount: '10%' },
+        { code: 'mu product sp', application: '', autoApply: 'No', startDate: '', endDate: '', redemptions: 0, discountType: 'Percentage', discount: '10%' },
+        { code: 'SP MU', application: '', autoApply: 'No', startDate: '', endDate: '', redemptions: 0, discountType: 'Percentage', discount: '10%' },
+        { code: 'MS10', application: 'NCE Microsoft 365 Business', autoApply: 'No', startDate: '', endDate: '', redemptions: 0, discountType: 'Percentage', discount: '10%' },
+        { code: 'WILSONFREE', application: '', autoApply: 'No', startDate: '', endDate: '', redemptions: '1 of 1', discountType: 'Percentage', discount: '100%' },
+        { code: 'ADOBE_TEST', application: '', autoApply: 'No', startDate: '', endDate: '', redemptions: 2, discountType: 'Percentage', discount: '100%' },
+        { code: '', application: '', autoApply: 'No', startDate: '10/01/22', endDate: '12/31/22', redemptions: 86, discountType: 'Percentage', discount: '10%' },
+        { code: '2020NCE', application: '', autoApply: 'No', startDate: '', endDate: '', redemptions: 0, discountType: 'Percentage', discount: '10%' }
+      ];
+
+      return (
+        <>
+          {/* Discounts Listing Page */}
+          <Group justify="space-between" align="center" mb="lg">
+            <Title order={1} size="1.5rem" fw={600} c="#374151">
+              Discounts
+            </Title>
+            <Button
+              bg="#0891b2"
+              leftSection={<Text size="lg">+</Text>}
+              styles={{
+                root: {
+                  '&:hover': {
+                    backgroundColor: '#0891b2'
+                  }
+                }
+              }}
+            >
+              Add Discount
+            </Button>
+          </Group>
+
+          {/* Filters and Search */}
+          <Group justify="space-between" align="center" mb="md">
+            <Group gap="sm">
+              <Button variant="outline" color="gray" size="sm">
+                Show Filters
+              </Button>
+              <Button variant="outline" color="gray" size="sm" leftSection={<IconChevronDown size={16} />}>
+                Download CSV
+              </Button>
+            </Group>
+            
+            <TextInput
+              placeholder="Search"
+              leftSection={<IconSearch size={16} />}
+              size="sm"
+              style={{ width: '300px' }}
+              styles={{
+                input: {
+                  borderColor: '#d1d5db',
+                  '&:focus': {
+                    borderColor: '#0891b2'
+                  }
+                }
+              }}
+            />
+          </Group>
+
+          {/* Results Count */}
+          <Text size="sm" c="#6b7280" mb="md">
+            {sampleExistingDiscounts.length} results
+          </Text>
+
+          {/* Discounts Table - Same structure as discounts-listing but only existing discounts */}
+          <Box style={{ 
+            border: '1px solid #e5e7eb', 
+            borderRadius: '8px', 
+            overflow: 'hidden',
+            backgroundColor: 'white',
+            overflowX: 'auto'
+          }}>
+            <Table 
+              striped 
+              highlightOnHover
+              style={{ minWidth: '1200px', tableLayout: 'fixed' }}
+            >
+              <Table.Thead bg="#f9fafb">
+                <Table.Tr>
+                  <Table.Th style={{ fontWeight: 600, color: '#374151', width: '300px' }}>Code</Table.Th>
+                  <Table.Th style={{ fontWeight: 600, color: '#374151', width: '200px' }}>Application</Table.Th>
+                  <Table.Th style={{ fontWeight: 600, color: '#374151', width: '130px' }}>Redemptions</Table.Th>
+                  <Table.Th style={{ fontWeight: 600, color: '#374151', width: '120px' }}>Start date</Table.Th>
+                  <Table.Th style={{ fontWeight: 600, color: '#374151', width: '120px' }}>End date</Table.Th>
+                  <Table.Th style={{ fontWeight: 600, color: '#374151', width: '120px' }}>Discount</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {sampleExistingDiscounts.map((discount, index) => (
+                  <Table.Tr key={index}>
+                    <Table.Td style={{ width: '300px', wordWrap: 'break-word', whiteSpace: 'normal' }}>
+                      {discount.autoApply === 'Yes' ? '' : discount.code}
+                    </Table.Td>
+                    <Table.Td style={{ width: '200px' }}>{discount.application}</Table.Td>
+                    <Table.Td style={{ width: '130px' }}>{discount.redemptions || 0}</Table.Td>
+                    <Table.Td style={{ width: '120px' }}>{discount.startDate}</Table.Td>
+                    <Table.Td style={{ width: '120px' }}>{discount.endDate}</Table.Td>
+                    <Table.Td style={{ width: '120px' }}>
+                      {discount.discountType === 'Fixed price' 
+                        ? (discount.discount.includes('$') ? discount.discount : `$${discount.discount}`)
+                        : discount.discount}
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Box>
+        </>
+      );
+    }
+
     return null;
   };
 
@@ -1651,12 +1840,20 @@ const AdobeDiscountsFlow: React.FC = () => {
               <AppDirectHeader onCartClick={handleAddTestDuplicate} />
       
       {/* Secondary Navigation */}
-      <AppDirectSecondaryNav activeTab={currentView === 'discounts-listing' ? 'products' : 'settings'} />
+      <AppDirectSecondaryNav 
+        activeTab={
+          currentView === 'marketplace-discounts' ? 'marketplace' : 
+          currentView === 'discounts-listing' ? 'products' : 
+          'settings'
+        }
+        onMarketplaceClick={handleMarketplaceClick}
+        onSettingsClick={handleSettingsClick}
+      />
       
       {/* Main Layout */}
       <Flex style={{ minHeight: 'calc(100vh - 108px)' }}>
         {/* Sidebar - Conditional */}
-        {currentView === 'discounts-listing' ? <CatalogSidebar /> : <SettingsSidebar />}
+        {(currentView === 'discounts-listing' || currentView === 'marketplace-discounts') ? <CatalogSidebar /> : <SettingsSidebar />}
         
         {/* Main Content Area */}
         <Box style={{ flex: 1, padding: '24px', backgroundColor: '#ffffff', minWidth: 0 }}>

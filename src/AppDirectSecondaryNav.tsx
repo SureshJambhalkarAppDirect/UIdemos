@@ -4,9 +4,11 @@ import { Box, Group, Text, Button } from '@mantine/core';
 interface SecondaryNavProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
+  onMarketplaceClick?: () => void;
+  onSettingsClick?: () => void;
 }
 
-const AppDirectSecondaryNav = ({ activeTab = 'companies', onTabChange }: SecondaryNavProps) => {
+const AppDirectSecondaryNav = ({ activeTab = 'companies', onTabChange, onMarketplaceClick, onSettingsClick }: SecondaryNavProps) => {
   const tabs = [
     { id: 'marketplace', label: 'Marketplace' },
     { id: 'dashboard', label: 'Dashboard' },
@@ -26,7 +28,15 @@ const AppDirectSecondaryNav = ({ activeTab = 'companies', onTabChange }: Seconda
             variant="subtle"
             color="gray"
             size="sm"
-            onClick={() => onTabChange?.(tab.id)}
+            onClick={() => {
+              if (tab.id === 'marketplace' && onMarketplaceClick) {
+                onMarketplaceClick();
+              } else if (tab.id === 'settings' && onSettingsClick) {
+                onSettingsClick();
+              } else {
+                onTabChange?.(tab.id);
+              }
+            }}
             styles={{
               root: {
                 backgroundColor: activeTab === tab.id ? 'transparent' : 'transparent',
