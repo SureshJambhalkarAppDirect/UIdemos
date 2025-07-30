@@ -22,6 +22,22 @@ interface FeedbackData {
   timestamp: Date;
 }
 
+// Convert confidence to descriptive terms and colors (Apple design approach)
+const getConfidenceLabel = (confidence: number): string => {
+  if (confidence >= 0.9) return "High confidence";
+  if (confidence >= 0.75) return "Medium confidence";
+  if (confidence >= 0.6) return "Low confidence";
+  return "Very low confidence";
+};
+
+// Apple-inspired color mapping for confidence levels
+const getConfidenceColor = (confidence: number): string => {
+  if (confidence >= 0.9) return "green";    // High: Success green (Apple's positive indicator)
+  if (confidence >= 0.75) return "blue";    // Medium: Trustworthy blue (Apple's primary)
+  if (confidence >= 0.6) return "orange";   // Low: Warning orange (Apple's caution)
+  return "red";                             // Very low: Alert red (Apple's error)
+};
+
 const ResponseFeedback: React.FC<ResponseFeedbackProps> = ({
   messageId,
   query,
@@ -125,19 +141,28 @@ const ResponseFeedback: React.FC<ResponseFeedbackProps> = ({
           </ActionIcon>
         </Group>
 
-        {/* Source indicator for training purposes */}
-        <Badge 
+        {/* Source indicator for training purposes - Hidden as requested */}
+        {/* <Badge 
           size="xs" 
           variant="dot" 
           color={source === 'llm' ? 'blue' : source === 'cache' ? 'violet' : 'orange'}
         >
           {source.toUpperCase()}
-        </Badge>
+        </Badge> */}
 
         {confidence && (
-          <Text size="xs" c="dimmed">
-            {Math.round(confidence * 100)}%
-          </Text>
+          <Badge 
+            size="sm" 
+            variant="light"
+            color={getConfidenceColor(confidence)}
+            style={{ 
+              textTransform: 'none',
+              fontWeight: 500,
+              fontSize: '10px'
+            }}
+          >
+            {getConfidenceLabel(confidence)}
+          </Badge>
         )}
       </Group>
 

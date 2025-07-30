@@ -23,6 +23,56 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// devs.ai API Proxy endpoint
+app.post('/api/devs-ai/chats/completions', async (req, res) => {
+  try {
+    const { apiKey, model, messages, stream } = req.body;
+    
+    if (!apiKey) {
+      return res.status(400).json({ error: 'API key is required' });
+    }
+    
+    console.log(`Proxying devs.ai request - Model: ${model}`);
+    
+    // Forward the request to devs.ai using their correct API format
+    const response = await fetch('https://devs.ai/api/v1/chats/completions', {
+      method: 'POST',
+      headers: {
+        'X-Authorization': apiKey, // devs.ai uses X-Authorization header
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: model || 'claude-3-5-sonnet-20241022', // Can be AI ID or LLM model name
+        messages: messages || [],
+        stream: stream || false
+      }),
+    });
+    
+    let responseData;
+    const responseText = await response.text();
+    
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (parseError) {
+      // Handle non-JSON responses (like plain text error messages)
+      responseData = { error: responseText };
+    }
+    
+    if (!response.ok) {
+      console.error(`devs.ai API Error: ${response.status} - ${responseText}`);
+      return res.status(response.status).json(responseData);
+    }
+    
+    console.log('devs.ai response received successfully');
+    res.json(responseData);
+  } catch (error) {
+    console.error('devs.ai Proxy Error:', error);
+    res.status(500).json({
+      error: error.message
+    });
+  }
+});
+
 // Adobe credentials from environment variables
 const ADOBE_CONFIG = {
   sandbox: {
@@ -577,5 +627,6 @@ app.listen(PORT, () => {
   console.log(`Price lists endpoint: http://localhost:${PORT}/api/adobe/proxy/v3/pricelist`);
   console.log(`Recommendations endpoint: http://localhost:${PORT}/api/adobe/proxy/v3/recommendations`);
   console.log(`Customer subscriptions endpoint: http://localhost:${PORT}/api/adobe/proxy/v3/customers/:customerId/subscriptions`);
+  console.log(`devs.ai proxy endpoint: http://localhost:${PORT}/api/devs-ai/chats/completions`);
   console.log(`Note: Order preview uses existing order endpoints with ?preview=true&fetch-recommendations=true`);
 }); 

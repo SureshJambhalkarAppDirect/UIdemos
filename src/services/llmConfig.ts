@@ -6,12 +6,12 @@ interface LLMConfig {
   timeout: number;
 }
 
-// Default configuration - devs.ai endpoint is standardized
+// Default configuration - using local proxy to avoid CORS
 let config: LLMConfig = {
-  endpoint: 'https://devs.ai', // Fixed devs.ai endpoint
+  endpoint: 'http://localhost:3001', // Local proxy endpoint
   apiKey: '',
-  defaultModel: '', // This will be the AI ID from devs.ai
-  timeout: 10000, // Increased timeout for devs.ai
+  defaultModel: 'claude-3-5-sonnet-20241022', // Default to Claude 3.5 Sonnet
+  timeout: 10000, // Increased timeout for proxy
 };
 
 // Configuration setters
@@ -35,7 +35,7 @@ export const setModel = (model: string) => {
 export const getConfig = (): LLMConfig => config;
 
 export const isConfigured = (): boolean => {
-  return Boolean(config.apiKey && config.endpoint);
+  return Boolean(config.apiKey && config.endpoint && config.defaultModel);
 };
 
 // Validate configuration
@@ -44,7 +44,7 @@ export const validateConfig = (): { valid: boolean; errors: string[] } => {
   
   if (!config.apiKey) errors.push('API key is required');
   if (!config.endpoint) errors.push('Endpoint is required');
-  if (!config.defaultModel) errors.push('Default model is required');
+  // Model has a default, so no need to require it
   
   return {
     valid: errors.length === 0,

@@ -11,7 +11,7 @@ interface LLMSettingsModalProps {
 const LLMSettingsModal: React.FC<LLMSettingsModalProps> = ({ opened, onClose }) => {
   const [apiKey, setApiKey] = useState('');
   const [endpoint, setEndpointValue] = useState('');
-  const [selectedModel, setSelectedModel] = useState('');
+  const [selectedModel, setSelectedModel] = useState('claude-3-5-sonnet-20241022');
   const [isValid, setIsValid] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -22,7 +22,7 @@ const LLMSettingsModal: React.FC<LLMSettingsModalProps> = ({ opened, onClose }) 
       const config = getConfig();
       setApiKey(config.apiKey);
       setEndpointValue(config.endpoint);
-      setSelectedModel(config.defaultModel);
+      setSelectedModel(config.defaultModel || 'claude-3-5-sonnet-20241022');
       
       const validation = validateConfig();
       setIsValid(validation.valid);
@@ -61,15 +61,15 @@ const LLMSettingsModal: React.FC<LLMSettingsModalProps> = ({ opened, onClose }) 
       setAPIKey(apiKey);
       setModel(selectedModel);
       
-      // Test devs.ai connection with a simple request
-      const response = await fetch('https://devs.ai/api/v1/chats/completions', {
+      // Test devs.ai connection via proxy
+      const response = await fetch('http://localhost:3001/api/devs-ai/chats/completions', {
         method: 'POST',
         headers: {
-          'X-Authorization': apiKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: selectedModel,
+          apiKey: apiKey,
+          model: selectedModel, // Can be AI ID or LLM model name per devs.ai docs
           messages: [{ role: 'user', content: 'Hello, can you help me?' }],
           stream: false,
         }),
@@ -80,7 +80,7 @@ const LLMSettingsModal: React.FC<LLMSettingsModalProps> = ({ opened, onClose }) 
         setIsValid(true);
       } else {
         const errorText = await response.text();
-        setErrors([`❌ API Error (${response.status}): ${errorText || 'Invalid AI ID or API key'}`]);
+        setErrors([`❌ API Error (${response.status}): ${errorText || 'Invalid API key or model'}`]);
         setIsValid(false);
       }
     } catch (error) {
@@ -115,7 +115,7 @@ const LLMSettingsModal: React.FC<LLMSettingsModalProps> = ({ opened, onClose }) 
         >
           <Group justify="space-between">
             <Text size="sm">
-              {isConfigured() ? 'LLM API is configured and ready' : 'LLM API requires configuration'}
+              {isConfigured() ? 'devs.ai API is configured and ready' : 'devs.ai API requires configuration'}
             </Text>
             <Badge 
               color={isConfigured() ? "green" : "orange"} 
@@ -130,8 +130,8 @@ const LLMSettingsModal: React.FC<LLMSettingsModalProps> = ({ opened, onClose }) 
         {/* API Key */}
         <TextInput
           label="devs.ai API Key"
-          description="Your devs.ai API key for accessing Claude and OpenAI models"
-          placeholder="Enter your devs.ai API key..."
+          description="Your devs.ai API key (create at https://devs.ai/api-keys)"
+          placeholder="sk-..."
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           leftSection={<IconKey size={16} />}
@@ -141,15 +141,19 @@ const LLMSettingsModal: React.FC<LLMSettingsModalProps> = ({ opened, onClose }) 
 
         {/* Endpoint is hidden since it's fixed for devs.ai */}
 
-        {/* AI ID Selection */}
-        <TextInput
-          label="AI ID"
-          description="Your devs.ai AI ID (found in your AI's URL or dashboard)"
-          placeholder="ai_abc123xyz or my-analytics-ai"
+        {/* Model Selection */}
+        <Select
+          label="Model"
+          description="Choose your preferred AI model"
           value={selectedModel}
-          onChange={(e) => setSelectedModel(e.target.value)}
+          onChange={(value) => setSelectedModel(value || 'claude-3-5-sonnet-20241022')}
+          data={[
+            { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Recommended)' },
+            { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku (Faster)' },
+            { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+            { value: 'gpt-4o', label: 'GPT-4o' }
+          ]}
           leftSection={<IconBrain size={16} />}
-          required
         />
 
         {/* Validation Errors */}
@@ -165,9 +169,9 @@ const LLMSettingsModal: React.FC<LLMSettingsModalProps> = ({ opened, onClose }) 
         )}
 
         {/* Success Message */}
-        {isValid && apiKey && selectedModel && (
+        {isValid && apiKey && (
           <Alert icon={<IconCheck size={16} />} color="green" variant="light">
-            <Text size="sm">Configuration is valid! Your AI assistant will use devs.ai with pattern matching as fallback.</Text>
+            <Text size="sm">Configuration is valid! Your AI assistant will use devs.ai with {selectedModel} and pattern matching as fallback.</Text>
           </Alert>
         )}
 
@@ -180,14 +184,14 @@ const LLMSettingsModal: React.FC<LLMSettingsModalProps> = ({ opened, onClose }) 
             variant="outline" 
             onClick={handleTest}
             loading={isSaving}
-            disabled={!apiKey || !selectedModel}
+            disabled={!apiKey}
           >
             Test Config
           </Button>
           <Button 
             onClick={handleSave}
             loading={isSaving}
-            disabled={!apiKey || !selectedModel}
+            disabled={!apiKey}
             style={{ backgroundColor: '#0891b2' }}
           >
             Save Configuration
@@ -198,10 +202,10 @@ const LLMSettingsModal: React.FC<LLMSettingsModalProps> = ({ opened, onClose }) 
         <Alert color="blue" variant="light">
           <Text size="sm" fw={500} mb="xs">How this works:</Text>
           <Text size="sm">
-            • <strong>Primary:</strong> devs.ai API with your custom AI for superior natural language understanding<br/>
+            • <strong>Primary:</strong> devs.ai API with standard models for superior natural language understanding<br/>
             • <strong>Fallback:</strong> Pattern matching if API fails or is unavailable<br/>
             • <strong>Caching:</strong> 5-minute cache to reduce API costs for repeated queries<br/>
-            • <strong>Setup:</strong> Create an AI on <a href="https://devs.ai" target="_blank" style={{color: '#0891b2'}}>devs.ai</a> and copy its ID here
+            • <strong>Setup:</strong> Get your API key from <a href="https://devs.ai/api-keys" target="_blank" style={{color: '#0891b2'}}>devs.ai/api-keys</a> and select your preferred model
           </Text>
         </Alert>
       </Stack>

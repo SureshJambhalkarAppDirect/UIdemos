@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { 
   AppShell, 
@@ -52,6 +52,7 @@ import {
   IconRobot,
   IconUser,
   IconBulb,
+  IconSparkles,
   IconTrendingUp,
   IconChartLine,
   IconChartPie,
@@ -196,26 +197,86 @@ const processNaturalLanguageQuery = (query: string, lastContext?: { entity: stri
   
   // Check for visualization-only requests first (context-dependent)
   const visualizationOnlyPatterns = [
-    /^make it a? (line|bar|insight)/i,
-    /^change to (line|bar|insight)/i,
-    /^show as (line|bar|insight)/i,
-    /^i want a? (line|bar|insight)/i,
-    /^(line|bar|insight) chart$/i,
-    /^make this a? (line|bar|insight)/i,
-    /^convert to (line|bar|insight)/i,
-    /^give me a? (line|bar|insight)/i,
-    /^create a? (line|bar|insight)/i
+    // Handle compound chart names with "chart" suffix
+    /^make it a? (pie chart|line chart|bar chart|scatter plot|bubble chart|heatmap|treemap|funnel chart|gauge chart|radar chart|spider chart|area chart|histogram|sankey diagram|waterfall chart|gantt chart|network diagram|map)/i,
+    /^change to a? (pie chart|line chart|bar chart|scatter plot|bubble chart|heatmap|treemap|funnel chart|gauge chart|radar chart|spider chart|area chart|histogram|sankey diagram|waterfall chart|gantt chart|network diagram|map)/i,
+    /^show as a? (pie chart|line chart|bar chart|scatter plot|bubble chart|heatmap|treemap|funnel chart|gauge chart|radar chart|spider chart|area chart|histogram|sankey diagram|waterfall chart|gantt chart|network diagram|map)/i,
+    /^i want a? (pie chart|line chart|bar chart|scatter plot|bubble chart|heatmap|treemap|funnel chart|gauge chart|radar chart|spider chart|area chart|histogram|sankey diagram|waterfall chart|gantt chart|network diagram|map)/i,
+    /^(pie chart|line chart|bar chart|scatter plot|bubble chart|heatmap|treemap|funnel chart|gauge chart|radar chart|spider chart|area chart|histogram|sankey diagram|waterfall chart|gantt chart|network diagram|map)$/i,
+    /^make this a? (pie chart|line chart|bar chart|scatter plot|bubble chart|heatmap|treemap|funnel chart|gauge chart|radar chart|spider chart|area chart|histogram|sankey diagram|waterfall chart|gantt chart|network diagram|map)/i,
+    /^convert to a? (pie chart|line chart|bar chart|scatter plot|bubble chart|heatmap|treemap|funnel chart|gauge chart|radar chart|spider chart|area chart|histogram|sankey diagram|waterfall chart|gantt chart|network diagram|map)/i,
+    /^give me a? (pie chart|line chart|bar chart|scatter plot|bubble chart|heatmap|treemap|funnel chart|gauge chart|radar chart|spider chart|area chart|histogram|sankey diagram|waterfall chart|gantt chart|network diagram|map)/i,
+    /^create a? (pie chart|line chart|bar chart|scatter plot|bubble chart|heatmap|treemap|funnel chart|gauge chart|radar chart|spider chart|area chart|histogram|sankey diagram|waterfall chart|gantt chart|network diagram|map)/i,
+    // Handle single word visualization types (backup patterns)
+    /^make it a? (line|bar|insight|pie|scatter|bubble|heatmap|treemap|funnel|gauge|radar|spider|area|histogram|sankey|waterfall|gantt|network|map)/i,
+    /^change to (line|bar|insight|pie|scatter|bubble|heatmap|treemap|funnel|gauge|radar|spider|area|histogram|sankey|waterfall|gantt|network|map)/i,
+    /^show as (line|bar|insight|pie|scatter|bubble|heatmap|treemap|funnel|gauge|radar|spider|area|histogram|sankey|waterfall|gantt|network|map)/i,
+    /^i want a? (line|bar|insight|pie|scatter|bubble|heatmap|treemap|funnel|gauge|radar|spider|area|histogram|sankey|waterfall|gantt|network|map)/i,
+    /^(line|bar|insight|pie|scatter|bubble|heatmap|treemap|funnel|gauge|radar|spider|area|histogram|sankey|waterfall|gantt|network|map) chart$/i,
+    /^make this a? (line|bar|insight|pie|scatter|bubble|heatmap|treemap|funnel|gauge|radar|spider|area|histogram|sankey|waterfall|gantt|network|map)/i,
+    /^convert to (line|bar|insight|pie|scatter|bubble|heatmap|treemap|funnel|gauge|radar|spider|area|histogram|sankey|waterfall|gantt|network|map)/i,
+    /^give me a? (line|bar|insight|pie|scatter|bubble|heatmap|treemap|funnel|gauge|radar|spider|area|histogram|sankey|waterfall|gantt|network|map)/i,
+    /^create a? (line|bar|insight|pie|scatter|bubble|heatmap|treemap|funnel|gauge|radar|spider|area|histogram|sankey|waterfall|gantt|network|map)/i
   ];
 
   // Extract visualization from context request
   let contextVisualization: string | null = null;
+  let contextIsUnsupportedVisualization = false;
+  let contextRequestedVisualization = '';
+  
   for (const pattern of visualizationOnlyPatterns) {
     const match = query.match(pattern);
     if (match) {
       const vizType = match[1]?.toLowerCase();
-      if (vizType === 'line') contextVisualization = 'line';
-      else if (vizType === 'bar') contextVisualization = 'bar';
-      else if (vizType === 'insight') contextVisualization = 'insight';
+      
+      // Map visualization types (both compound and single word forms)
+      const vizMapping: { [key: string]: { supported: boolean; actual: string; displayName: string } } = {
+        // Supported types
+        'line': { supported: true, actual: 'line', displayName: 'line chart' },
+        'line chart': { supported: true, actual: 'line', displayName: 'line chart' },
+        'bar': { supported: true, actual: 'bar', displayName: 'bar chart' },
+        'bar chart': { supported: true, actual: 'bar', displayName: 'bar chart' },
+        'insight': { supported: true, actual: 'insight', displayName: 'insight' },
+        
+        // Unsupported types - single word forms
+        'pie': { supported: false, actual: 'bar', displayName: 'pie chart' },
+        'scatter': { supported: false, actual: 'bar', displayName: 'scatter plot' },
+        'bubble': { supported: false, actual: 'bar', displayName: 'bubble chart' },
+        'heatmap': { supported: false, actual: 'bar', displayName: 'heatmap' },
+        'treemap': { supported: false, actual: 'bar', displayName: 'treemap' },
+        'funnel': { supported: false, actual: 'bar', displayName: 'funnel chart' },
+        'gauge': { supported: false, actual: 'bar', displayName: 'gauge chart' },
+        'radar': { supported: false, actual: 'bar', displayName: 'radar chart' },
+        'spider': { supported: false, actual: 'bar', displayName: 'spider chart' },
+        'area': { supported: false, actual: 'bar', displayName: 'area chart' },
+        'histogram': { supported: false, actual: 'bar', displayName: 'histogram' },
+        'sankey': { supported: false, actual: 'bar', displayName: 'sankey diagram' },
+        'waterfall': { supported: false, actual: 'bar', displayName: 'waterfall chart' },
+        'gantt': { supported: false, actual: 'bar', displayName: 'gantt chart' },
+        'network': { supported: false, actual: 'bar', displayName: 'network diagram' },
+        'map': { supported: false, actual: 'bar', displayName: 'map visualization' },
+        
+        // Unsupported types - compound forms
+        'pie chart': { supported: false, actual: 'bar', displayName: 'pie chart' },
+        'scatter plot': { supported: false, actual: 'bar', displayName: 'scatter plot' },
+        'bubble chart': { supported: false, actual: 'bar', displayName: 'bubble chart' },
+        'funnel chart': { supported: false, actual: 'bar', displayName: 'funnel chart' },
+        'gauge chart': { supported: false, actual: 'bar', displayName: 'gauge chart' },
+        'radar chart': { supported: false, actual: 'bar', displayName: 'radar chart' },
+        'spider chart': { supported: false, actual: 'bar', displayName: 'spider chart' },
+        'area chart': { supported: false, actual: 'bar', displayName: 'area chart' },
+        'sankey diagram': { supported: false, actual: 'bar', displayName: 'sankey diagram' },
+        'waterfall chart': { supported: false, actual: 'bar', displayName: 'waterfall chart' },
+        'gantt chart': { supported: false, actual: 'bar', displayName: 'gantt chart' },
+        'network diagram': { supported: false, actual: 'bar', displayName: 'network diagram' }
+      };
+      
+      const vizInfo = vizMapping[vizType];
+      if (vizInfo) {
+        contextVisualization = vizInfo.actual;
+        contextRequestedVisualization = vizInfo.displayName;
+        contextIsUnsupportedVisualization = !vizInfo.supported;
+      }
       break;
     }
   }
@@ -231,12 +292,18 @@ const processNaturalLanguageQuery = (query: string, lastContext?: { entity: stri
       confidence: 0.95,
       isValidCombination: true,
       suggestions: null,
-      isContextual: true
+      isContextual: true,
+      isUnsupportedVisualization: contextIsUnsupportedVisualization,
+      requestedVisualization: contextRequestedVisualization
     };
   }
 
   // If visualization-only request but no context
   if (contextVisualization && !lastContext) {
+    const helpMessage = contextIsUnsupportedVisualization 
+      ? `${contextRequestedVisualization}s aren't currently supported, but I can help you create a bar chart! What data would you like to visualize? Try asking something like 'Show me commission tickets by provider as a bar chart'`
+      : "I'd like to help you create a " + contextRequestedVisualization + "! What data would you like to visualize? Try asking something like 'Show me commission tickets by provider as a " + contextRequestedVisualization + "'";
+    
     return {
       intent: 'need_context',
       entity: null,
@@ -245,7 +312,9 @@ const processNaturalLanguageQuery = (query: string, lastContext?: { entity: stri
       timeframe: 'last_12_months',
       confidence: 0.3,
       isValidCombination: false,
-      suggestions: ["I'd like to help you create a " + contextVisualization + " chart! What data would you like to visualize? Try asking something like 'Show me commission tickets by provider as a " + contextVisualization + " chart'"]
+      suggestions: [helpMessage],
+      isUnsupportedVisualization: contextIsUnsupportedVisualization,
+      requestedVisualization: contextRequestedVisualization
     };
   }
   
@@ -310,12 +379,53 @@ const processNaturalLanguageQuery = (query: string, lastContext?: { entity: stri
 
   // Detect visualization preference
   let visualization = 'bar'; // default
-  if (/line|trend|over time|timeline/i.test(query)) {
-      visualization = 'line';
-  } else if (/insight|metric|number|kpi|summary|total/i.test(query)) {
-    visualization = 'insight';
-  } else if (/bar|column|chart|graph/i.test(query)) {
-    visualization = 'bar';
+  let isUnsupportedVisualization = false;
+  let requestedVisualization = '';
+  
+  // Supported visualizations
+  const supportedVizTypes = ['bar', 'line', 'insight'];
+  
+  // All possible visualization types (supported + unsupported)
+  const allVizPatterns = [
+    { pattern: /pie|doughnut|donut/i, name: 'pie chart' },
+    { pattern: /scatter|bubble/i, name: 'scatter plot' },
+    { pattern: /heatmap|heat map/i, name: 'heatmap' },
+    { pattern: /treemap|tree map/i, name: 'treemap' },
+    { pattern: /funnel/i, name: 'funnel chart' },
+    { pattern: /gauge|speedometer/i, name: 'gauge chart' },
+    { pattern: /radar|spider/i, name: 'radar chart' },
+    { pattern: /area/i, name: 'area chart' },
+    { pattern: /histogram/i, name: 'histogram' },
+    { pattern: /box plot|violin plot/i, name: 'box plot' },
+    { pattern: /sankey/i, name: 'sankey diagram' },
+    { pattern: /waterfall/i, name: 'waterfall chart' },
+    { pattern: /gantt/i, name: 'gantt chart' },
+    { pattern: /network|node.link/i, name: 'network diagram' },
+    { pattern: /geographic|map|choropleth/i, name: 'map visualization' },
+    { pattern: /line|trend|over time|timeline/i, name: 'line chart' },
+    { pattern: /insight|metric|number|kpi|summary|total/i, name: 'insight' },
+    { pattern: /bar|column|chart|graph/i, name: 'bar chart' }
+  ];
+  
+  // Find requested visualization type
+  for (const vizPattern of allVizPatterns) {
+    if (vizPattern.pattern.test(query)) {
+      requestedVisualization = vizPattern.name;
+      
+      // Check if it's supported
+      if (vizPattern.name === 'line chart') {
+        visualization = 'line';
+      } else if (vizPattern.name === 'insight') {
+        visualization = 'insight';
+      } else if (vizPattern.name === 'bar chart') {
+        visualization = 'bar';
+      } else {
+        // Unsupported visualization - fallback to bar
+        visualization = 'bar';
+        isUnsupportedVisualization = true;
+      }
+      break;
+    }
   }
 
   // Determine intent
@@ -332,16 +442,18 @@ const processNaturalLanguageQuery = (query: string, lastContext?: { entity: stri
   }
   
   if (bestMatch) {
-  return {
-    intent,
+    return {
+      intent,
       entity: bestMatch.entity,
       metric: bestMatch.metric,
-    visualization,
+      visualization,
       timeframe: 'last_12_months',
       confidence: Math.min(bestMatch.confidence, 0.95),
       isValidCombination: true,
       suggestions: null,
-      isContextual: false
+      isContextual: false,
+      isUnsupportedVisualization,
+      requestedVisualization
     };
   }
 
@@ -571,9 +683,17 @@ const getEnhancedSuggestionResponse = (
   
   // Add confidence indicator for transparency
   if (analysis.confidence) {
-    const confidencePercent = Math.round(analysis.confidence * 100);
-    if (confidencePercent > 0 && confidencePercent < 70) {
-      response += `\n\n*I'm ${confidencePercent}% confident in my understanding of your request.*`;
+    // Convert confidence to descriptive terms
+    const getConfidenceLabel = (confidence: number): string => {
+      if (confidence >= 0.9) return "highly confident";
+      if (confidence >= 0.75) return "moderately confident";
+      if (confidence >= 0.6) return "somewhat confident";
+      return "less confident";
+    };
+    
+    const confidenceLabel = getConfidenceLabel(analysis.confidence);
+    if (analysis.confidence > 0 && analysis.confidence < 0.7) {
+      response += `\n\n*I'm ${confidenceLabel} in my understanding of your request.*`;
     }
   }
   
@@ -734,7 +854,10 @@ const CustomView = () => {
   const [currentView, setCurrentView] = useState<'dashboard' | 'add-insight' | 'ai-assistant'>('dashboard');
   const [entity, setEntity] = useState<string | null>(null);
   const [widgetType, setWidgetType] = useState<string | null>(null);
+  const [groupBy, setGroupBy] = useState<string | null>(null);
   const [visualizationType, setVisualizationType] = useState<string | null>('bar');
+  const [timeFrame, setTimeFrame] = useState<string>('last_1_month');
+  const [aggregatedBy, setAggregatedBy] = useState<string>('monthly');
   const [insights, setInsights] = useState<Array<{
     type: string;
     visualization: string;
@@ -761,6 +884,23 @@ const CustomView = () => {
   ]);
   const [currentInput, setCurrentInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Scroll area ref for auto-scrolling
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        // Smooth animated scroll to bottom
+        scrollContainer.scrollTo({
+          top: scrollContainer.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [messages]);
 
   // Context memory for AI
   const [lastInsightContext, setLastInsightContext] = useState<{
@@ -828,6 +968,50 @@ const CustomView = () => {
     return widgetTypesByEntity[entity as keyof typeof widgetTypesByEntity] || [];
   };
 
+  // Group By options based on widget type
+  const getGroupByOptions = () => {
+    if (!widgetType) return [];
+    
+    // For new and total opportunities, add Status group by
+    if (widgetType === 'new_opportunities' || widgetType === 'total_opportunities') {
+      return [{ value: 'status', label: 'Status' }];
+    }
+    
+    // Add more group by options for other widget types as needed
+    return [];
+  };
+
+  // Time Frame options
+  const timeFrameOptions = [
+    { value: 'last_1_month', label: 'Last 1 month' },
+    { value: 'last_3_months', label: 'Last 3 months' },
+    { value: 'last_6_months', label: 'Last 6 months' },
+    { value: 'last_12_months', label: 'Last 12 months' },
+    { value: 'last_24_months', label: 'Last 24 months' },
+    { value: 'last_36_months', label: 'Last 36 months' }
+  ];
+
+  // Aggregated By options with smart logic
+  const getAggregatedByOptions = () => {
+    const baseOptions = [
+      { value: 'yearly', label: 'Yearly' },
+      { value: 'quarterly', label: 'Quarterly' },
+      { value: 'monthly', label: 'Monthly' },
+      { value: 'weekly', label: 'Weekly' },
+      { value: 'daily', label: 'Daily' }
+    ];
+
+    // If timeframe is Last 1 month, disable yearly and quarterly
+    if (timeFrame === 'last_1_month') {
+      return baseOptions.map(option => ({
+        ...option,
+        disabled: option.value === 'yearly' || option.value === 'quarterly'
+      }));
+    }
+
+    return baseOptions;
+  };
+
   const visualizationOptions = [
     { value: 'bar', label: 'Bar Graph (Default)' },
     { value: 'line', label: 'Line Graph' },
@@ -850,6 +1034,8 @@ const CustomView = () => {
     setCurrentInput('');
     setIsProcessing(true);
 
+    console.log(`🚀 Processing Query: "${inputText}"`);
+
     try {
       // Use LLM API with fallback to pattern matching
       const llmResponse = await processQueryWithLLM(inputText, lastInsightContext);
@@ -862,6 +1048,11 @@ const CustomView = () => {
       
       // Determine source for visual indicator
       const source = llmResponse.usedCache ? 'cache' : (llmResponse.fallbackUsed ? 'pattern' : 'llm');
+      console.log(`🔧 AI Response Source: ${source.toUpperCase()}`, { 
+        usedCache: llmResponse.usedCache, 
+        fallbackUsed: llmResponse.fallbackUsed, 
+        confidence: analysis?.confidence 
+      });
       
       let responseContent = '';
       let insight: {
@@ -888,8 +1079,12 @@ const CustomView = () => {
         });
 
         // Different messages for contextual vs new requests
-        if (analysis.isContextual) {
+        if (analysis.isContextual && analysis.isUnsupportedVisualization) {
+          responseContent = `${analysis.requestedVisualization}s aren't currently supported, so I've updated the visualization to a bar chart for you instead. This will clearly show your data with easy-to-compare bars.`;
+        } else if (analysis.isContextual) {
           responseContent = `I've updated the visualization to a ${analysis.visualization} chart for you!`;
+        } else if (analysis.isUnsupportedVisualization) {
+          responseContent = `${analysis.requestedVisualization}s aren't currently supported, so I've created a bar chart visualization for you instead. This will clearly show your data with easy-to-compare bars.`;
         } else {
           responseContent = '';
         }
@@ -948,8 +1143,12 @@ const CustomView = () => {
           title: getInsightTitle(analysis.metric)
         });
 
-        if (analysis.isContextual) {
+        if (analysis.isContextual && analysis.isUnsupportedVisualization) {
+          responseContent = `${analysis.requestedVisualization}s aren't currently supported, so I've updated the visualization to a bar chart for you instead. This will clearly show your data with easy-to-compare bars.`;
+        } else if (analysis.isContextual) {
           responseContent = `I've updated the visualization to a ${analysis.visualization} chart for you!`;
+        } else if (analysis.isUnsupportedVisualization) {
+          responseContent = `${analysis.requestedVisualization}s aren't currently supported, so I've created a bar chart visualization for you instead. This will clearly show your data with easy-to-compare bars.`;
         } else {
           responseContent = '';
         }
@@ -957,6 +1156,12 @@ const CustomView = () => {
         responseContent = "I'm having trouble understanding your request. Try asking something like 'Show me new companies as a bar chart'";
       }
       
+      console.log(`🔧 AI Response Source: PATTERN (Fallback)`, { 
+        confidence: analysis.confidence,
+        intent: analysis.intent,
+        entity: analysis.entity 
+      });
+
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
@@ -997,7 +1202,10 @@ const CustomView = () => {
     // Reset form
     setEntity(null);
     setWidgetType(null);
+    setGroupBy(null);
     setVisualizationType('bar');
+    setTimeFrame('last_1_month');
+    setAggregatedBy('monthly');
     setCurrentView('dashboard');
   };
 
@@ -1005,7 +1213,10 @@ const CustomView = () => {
   const handleCancel = () => {
     setEntity(null);
     setWidgetType(null);
+    setGroupBy(null);
     setVisualizationType('bar');
+    setTimeFrame('last_1_month');
+    setAggregatedBy('monthly');
     setCurrentView('dashboard');
     // Reset AI messages and context when closing
     setMessages([
@@ -1117,15 +1328,6 @@ const CustomView = () => {
           </Button>
           {currentView === 'ai-assistant' && (
             <Group gap="xs">
-              {/* Debug Status Badge */}
-              <Badge
-                variant="light"
-                size="xs"
-                color={isConfigured() ? 'green' : 'yellow'}
-                style={{ fontSize: '10px' }}
-              >
-                                 {isConfigured() ? `✓ AI: ${getConfig().defaultModel.slice(0, 12)}${getConfig().defaultModel.length > 12 ? '...' : ''}` : '⚠ Pattern Only'}
-              </Badge>
               <ActionIcon
                 variant="light"
                 size="lg"
@@ -1170,6 +1372,7 @@ const CustomView = () => {
               onChange={(value) => {
                 setEntity(value);
                 setWidgetType(null); // Reset widget type when entity changes
+                setGroupBy(null); // Reset group by when entity changes
               }}
               searchable
             />
@@ -1182,20 +1385,70 @@ const CustomView = () => {
               placeholder="Select a widget type"
               data={getWidgetOptions()}
               value={widgetType}
-              onChange={setWidgetType}
+              onChange={(value) => {
+                setWidgetType(value);
+                setGroupBy(null); // Reset group by when widget type changes
+              }}
               searchable
               disabled={!entity}
             />
           </Grid.Col>
           <Grid.Col span={4}>
             <Text size="sm" mb={4}>
+              Group By
+            </Text>
+            <Select
+              placeholder={!entity ? "Select entity first" : getGroupByOptions().length > 0 ? "Select group by" : "No grouping available"}
+              data={getGroupByOptions()}
+              value={groupBy}
+              onChange={setGroupBy}
+              disabled={!entity || getGroupByOptions().length === 0}
+              clearable
+            />
+          </Grid.Col>
+        </Grid>
+        
+        <Grid gutter="md" mt="md">
+          <Grid.Col span={4}>
+            <Text size="sm" mb={4}>
               Visualisation Type <span style={{ color: 'red' }}>*</span>
             </Text>
             <Select
+              placeholder="Select visualisation type"
               data={visualizationOptions}
               value={visualizationType}
               onChange={setVisualizationType}
-              disabled={!widgetType}
+              disabled={!entity}
+            />
+          </Grid.Col>
+          <Grid.Col span={4}>
+            <Text size="sm" mb={4}>
+              Time Frame <span style={{ color: 'red' }}>*</span>
+            </Text>
+            <Select
+              placeholder="Select time frame"
+              data={timeFrameOptions}
+              value={timeFrame}
+              onChange={(value) => {
+                setTimeFrame(value || 'last_1_month');
+                // Reset aggregated by to monthly if current selection becomes disabled
+                if (value === 'last_1_month' && (aggregatedBy === 'yearly' || aggregatedBy === 'quarterly')) {
+                  setAggregatedBy('monthly');
+                }
+              }}
+              disabled={!entity}
+            />
+          </Grid.Col>
+          <Grid.Col span={4}>
+            <Text size="sm" mb={4}>
+              Aggregated By <span style={{ color: 'red' }}>*</span>
+            </Text>
+            <Select
+              placeholder="Select aggregation"
+              data={getAggregatedByOptions()}
+              value={aggregatedBy}
+              onChange={(value) => setAggregatedBy(value || 'monthly')}
+              disabled={!entity}
             />
           </Grid.Col>
         </Grid>
@@ -1255,7 +1508,7 @@ const CustomView = () => {
                 <Button
                   color="blue"
                   onClick={handleManualInsight}
-                  disabled={!entity || !widgetType || !visualizationType}
+                  disabled={!entity || !widgetType || !visualizationType || !timeFrame || !aggregatedBy}
                 >
                   Add Insight
                 </Button>
@@ -1267,57 +1520,37 @@ const CustomView = () => {
           )}
         </Box>
       ) : currentView === 'ai-assistant' ? (
-        /* AI Assistant - Inline */
+        /* AI Assistant - Apple-Style Unified Conversation */
         <Box
           style={{
-            padding: '0',
             backgroundColor: 'white',
             height: 'calc(100vh - 140px)',
+            display: 'flex',
+            flexDirection: 'column',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
             overflow: 'hidden'
           }}
         >
-          <Box style={{ padding: 0 }}>
-            <Group justify="space-between" mb="xl">
-              <Group gap="md">
-                <Box
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: '12px',
-                    background: 'linear-gradient(135deg, #0629D3 0%, #G41B211 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <IconRobot size={24} color="white" />
-                </Box>
-                <Box>
-                  <Text fw={600} size="xl" c="#011B58">Ask Your Data Anything</Text>
-                  <Text size="sm" c="black" mt={4}>Get instant insights from your business data</Text>
-                </Box>
-              </Group>
+          {/* Simplified Header */}
+          <Box style={{ 
+            padding: '20px 32px', 
+            borderBottom: '1px solid #e5e7eb',
+            backgroundColor: '#f8f9fa'
+          }}>
+            <Group justify="space-between" align="center">
+              <Text fw={600} size="xl" c="#011B58">Ask Your Data Anything</Text>
               <CloseButton onClick={handleCancel} size="md" />
             </Group>
           </Box>
 
-          <Box style={{ padding: '0 32px', height: 'calc(100% - 140px)' }}>
-            <Stack gap="xl" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              {/* Chat Messages */}
-              <Box
-                style={{
-                  flex: 1,
-                  border: '1px solid #F0F0F0',
-                  borderRadius: '12px',
-                  backgroundColor: 'white',
-                  padding: '20px',
-                  minHeight: '200px',
-                  overflow: 'hidden'
-                }}
-              >
-                <ScrollArea h="100%" scrollbars="y">
-                  <Stack gap="lg">
-                    {messages.map((message, index) => (
+          {/* Unified Conversation Stream */}
+          <Box style={{ flex: 1, padding: '0 32px', overflow: 'hidden' }}>
+            <ScrollArea h="100%" scrollbars="y" ref={scrollAreaRef}>
+              <Stack gap="lg" style={{ paddingTop: '24px', paddingBottom: '32px' }}>
+                {/* Conversation Messages */}
+                {messages.map((message, index) => (
                       <Group key={message.id} align="flex-start" gap="md">
                         <Box
                           style={{
@@ -1337,25 +1570,17 @@ const CustomView = () => {
                           }
                         </Box>
                         <Box flex={1}>
-                          {/* First message (AI greeting) gets special styling */}
+                          {/* First message (AI greeting) - Apple style clean */}
                           {index === 0 && message.type === 'assistant' ? (
-                            <Paper 
-                              p="md" 
-                              radius="lg"
-                              style={{
-                                backgroundColor: '#F0F8FF',
-                                border: '1px solid #ABE7FF',
-                                boxShadow: 'none'
-                              }}
-                            >
-                              <Text size="sm" c="#0629D3" fw={500} style={{ lineHeight: 1.6 }}>
+                            <Box>
+                              <Text size="sm" c="#011B58" fw={500} style={{ lineHeight: 1.6 }}>
                                 {message.content}
                               </Text>
-                            </Paper>
+                            </Box>
                           ) : message.type === 'assistant' && message.insight ? (
                             /* AI Response with Chart Preview */
                             <Paper 
-                              p="lg" 
+                              p="md" 
                               radius="lg"
                               style={{
                                 backgroundColor: 'white',
@@ -1376,35 +1601,22 @@ const CustomView = () => {
                                 <Badge variant="light" color="green" size="sm">
                                   Preview
                                 </Badge>
-                                  {/* Source Indicator */}
-                                  {message.source && (
-                                    <Badge 
-                                      variant="dot" 
-                                      size="xs"
-                                      color={
-                                        message.source === 'llm' ? 'blue' : 
-                                        message.source === 'cache' ? 'violet' : 'orange'
-                                      }
-                                    >
-                                      {message.source === 'llm' ? '🤖 AI' : 
-                                       message.source === 'cache' ? '⚡ Cache' : '🔍 Pattern'}
-                                    </Badge>
-                                  )}
                                 </Group>
                               </Group>
                               
-                              {/* Mini Chart Preview - Fixed Width */}
-                              <Box
-                                style={{
-                                  height: '120px',
-                                  width: '400px',
-                                  backgroundColor: '#f8f9fa',
-                                  borderRadius: '8px',
-                                  padding: '12px',
-                                  marginBottom: '16px'
-                                }}
-                              >
-                                {message.insight.visualization === 'insight' ? (
+                              {/* Chart and Button Container - Proper Alignment */}
+                              <Group align="flex-end" justify="space-between" style={{ width: '100%' }}>
+                                {/* Mini Chart Preview */}
+                                <Box
+                                  style={{
+                                    height: '200px',
+                                    width: '400px',
+                                    backgroundColor: '#f8f9fa',
+                                    borderRadius: '8px',
+                                    padding: '12px'
+                                  }}
+                                >
+                                  {message.insight.visualization === 'insight' ? (
                                   /* Key Insight Display */
                                   <Box
                                     style={{
@@ -1533,13 +1745,10 @@ const CustomView = () => {
                                     )}
                                   </ResponsiveContainer>
                                 )}
-                              </Box>
+                                </Box>
 
-                              <Group justify="space-between" align="center">
-                                <Text size="xs" c="dimmed">
-                                  Click to add this insight to your dashboard
-                                </Text>
-              <Button 
+                                {/* Add to Dashboard Button - Bottom Aligned */}
+                                <Button 
                                   size="sm"
                                   radius="md"
                                   leftSection={<IconChartLine size={16} />}
@@ -1556,8 +1765,8 @@ const CustomView = () => {
                                   }}
                                 >
                                   Add to Dashboard
-              </Button>
-            </Group>
+                                </Button>
+                              </Group>
                               
                               {/* Feedback Component for Insights */}
                               <Box mt="sm" pt="sm" style={{ borderTop: '1px solid #f0f0f0' }}>
@@ -1581,27 +1790,9 @@ const CustomView = () => {
                                 boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
                               }}
                             >
-                              <Group justify="space-between" align="flex-start" mb="sm">
-                                <Box flex={1}>
                               <Text size="sm" style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
-                                    {message.content || "I'm not entirely sure what you're looking for. Could you try asking something like 'Show me revenue trends' or 'Display user growth over time'?"}
+                                {message.content || "I'm not entirely sure what you're looking for. Could you try asking something like 'Show me revenue trends' or 'Display user growth over time'?"}
                               </Text>
-                                </Box>
-                                {/* Source Indicator */}
-                                {message.source && (
-                                  <Badge 
-                                    variant="dot" 
-                                    size="xs"
-                                    color={
-                                      message.source === 'llm' ? 'blue' : 
-                                      message.source === 'cache' ? 'violet' : 'orange'
-                                    }
-                                  >
-                                    {message.source === 'llm' ? '🤖 AI' : 
-                                     message.source === 'cache' ? '⚡ Cache' : '🔍 Pattern'}
-                                  </Badge>
-                                )}
-                              </Group>
                               
                               {/* Feedback Component for Suggestions */}
                               <Box mt="sm" pt="sm" style={{ borderTop: '1px solid #f0f0f0' }}>
@@ -1837,108 +2028,126 @@ const CustomView = () => {
                         </Paper>
                       </Group>
                     )}
-                  </Stack>
-                </ScrollArea>
-              </Box>
 
-              {/* Suggested Questions */}
-              {(messages.length <= 1 || lastInsightContext) && (
-                <Box>
-                  <Text size="sm" fw={500} c="#011B58" mb="sm">
-                    {lastInsightContext ? `Try asking (based on your last chart: ${lastInsightContext.title}):` : 'Try asking:'}
-                  </Text>
-                  <Grid gutter="xs">
-                    {getContextualSuggestions().map((question, index) => (
-                      <Grid.Col key={index} span={6}>
-                        <Button
-                          variant="light"
-                          size="sm"
-                          radius="md"
-                          fullWidth
-                          leftSection={<IconBulb size={14} />}
-                          onClick={() => handleSendMessage(question)}
-                          style={{
-                            backgroundColor: lastInsightContext ? '#FFF8E7' : '#F0F8FF',
-                            border: `1px solid ${lastInsightContext ? '#FFD43B' : '#ABE7FF'}`,
-                            color: lastInsightContext ? '#B8860B' : '#0629D3',
-                            fontWeight: 400,
-                            height: '40px',
-                            justifyContent: 'flex-start',
-                            padding: '0 12px',
-                            '&:hover': {
-                              backgroundColor: lastInsightContext ? '#FFF4D6' : '#E6F3FF',
-                              borderColor: lastInsightContext ? '#B8860B' : '#0629D3'
-                            }
-                          }}
-                        >
-                          <Text size="xs" style={{ textAlign: 'left', lineHeight: 1.3 }}>
-                            {question}
-                          </Text>
-                        </Button>
-                      </Grid.Col>
-                    ))}
-                  </Grid>
-                </Box>
-              )}
+                {/* Suggested Questions as natural conversation elements */}
+                {(messages.length <= 1 || lastInsightContext) && (
+                  <Group align="flex-start" gap="md">
+                    <Box
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '50%',
+                        backgroundColor: '#011B58',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                    >
+                      <IconRobot size={18} color="white" />
+                    </Box>
+                    <Box flex={1}>
+                      <Text size="sm" c="#011B58" fw={500} style={{ marginBottom: '12px', lineHeight: 1.6 }}>
+                        {lastInsightContext ? `Based on your ${lastInsightContext.title}:` : 'Here are some things you can try:'}
+                      </Text>
+                      <Grid gutter="xs">
+                        {getContextualSuggestions().map((question, index) => (
+                          <Grid.Col key={index} span={6}>
+                            <Button
+                              variant="subtle"
+                              size="sm"
+                              radius="xl"
+                              fullWidth
+                              leftSection={<IconSparkles size={12} />}
+                              onClick={() => handleSendMessage(question)}
+                              style={{
+                                backgroundColor: 'rgba(6, 41, 211, 0.08)',
+                                border: '1px solid rgba(6, 41, 211, 0.2)',
+                                color: '#0629D3',
+                                fontWeight: 400,
+                                justifyContent: 'flex-start',
+                                height: 'auto',
+                                padding: '8px 12px',
+                                whiteSpace: 'normal',
+                                textAlign: 'left',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(6, 41, 211, 0.12)',
+                                  borderColor: '#0629D3'
+                                }
+                              }}
+                            >
+                              <Text size="sm" style={{ lineHeight: 1.4 }}>
+                                {question}
+                              </Text>
+                            </Button>
+                          </Grid.Col>
+                        ))}
+                      </Grid>
+                    </Box>
+                  </Group>
+                )}
+              </Stack>
+            </ScrollArea>
+          </Box>
 
-              {/* Input Area */}
-              <Box
+          {/* Fixed Input Area at Bottom - Apple Style */}
+          <Box
+            style={{
+              position: 'sticky',
+              bottom: 0,
+              backgroundColor: '#f8f9fa',
+              borderTop: '1px solid #e5e7eb',
+              padding: '20px 32px',
+              backdropFilter: 'blur(8px)'
+            }}
+          >
+            <Group gap="md">
+              <TextInput
+                flex={1}
+                placeholder="Ask me anything about your business data..."
+                value={currentInput}
+                onChange={(e) => setCurrentInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                disabled={isProcessing}
+                size="md"
+                radius="xl"
                 style={{
-                  border: '2px solid #F0F0F0',
-                  borderRadius: '16px',
-                  padding: '16px',
-                  backgroundColor: 'white',
-                  flexShrink: 0
+                  '& .mantine-Input-input': {
+                    border: '1px solid #e9ecef',
+                    backgroundColor: '#f8f9fa',
+                    fontSize: '16px',
+                    padding: '12px 20px',
+                    '&:focus': {
+                      borderColor: '#0629D3',
+                      backgroundColor: 'white',
+                      boxShadow: '0 0 0 3px rgba(6, 41, 211, 0.1)'
+                    }
+                  }
+                }}
+              />
+              <ActionIcon 
+                onClick={() => handleSendMessage()}
+                disabled={!currentInput.trim() || isProcessing}
+                size="lg"
+                radius="xl"
+                style={{
+                  background: currentInput.trim() && !isProcessing ? 
+                    '#0629D3' : 
+                    '#e9ecef',
+                  color: currentInput.trim() && !isProcessing ? 'white' : '#6c757d',
+                  border: 'none',
+                  minWidth: '44px',
+                  height: '44px',
+                  '&:hover': {
+                    background: currentInput.trim() && !isProcessing ? 
+                      '#0520b3' : 
+                      '#dee2e6'
+                  }
                 }}
               >
-                <Group gap="md">
-                  <TextInput
-                    flex={1}
-                    placeholder="Ask me anything about your business data..."
-                    value={currentInput}
-                    onChange={(e) => setCurrentInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    disabled={isProcessing}
-                    size="md"
-                    radius="lg"
-                    style={{
-                      '& .mantine-Input-input': {
-                        border: 'none',
-                        backgroundColor: '#FDFDDA',
-                        fontSize: '16px',
-                        padding: '16px 20px',
-                        '&:focus': {
-                          borderColor: '#0629D3',
-                          boxShadow: '0 0 0 2px rgba(6, 41, 211, 0.1)'
-                        }
-                      }
-                    }}
-                  />
-                  <ActionIcon 
-                    onClick={() => handleSendMessage()}
-                    disabled={!currentInput.trim() || isProcessing}
-                    size="xl"
-                    radius="lg"
-                    style={{
-                      background: currentInput.trim() && !isProcessing ? 
-                        '#011B58' : 
-                        '#F0F0F0',
-                      color: currentInput.trim() && !isProcessing ? 'white' : '#011B58',
-                      border: 'none',
-                      width: '56px',
-                      height: '56px',
-                      '&:hover': {
-                        background: currentInput.trim() && !isProcessing ? 
-                          '#001240' : 
-                          '#E6E6E6'
-                      }
-                    }}
-                  >
-                    <IconSend size={20} />
-          </ActionIcon>
-        </Group>
-              </Box>
-            </Stack>
+                <IconSend size={18} />
+              </ActionIcon>
+            </Group>
           </Box>
         </Box>
       ) : insights.length === 0 ? (
@@ -2364,7 +2573,7 @@ const AppInsightsAIFlow = () => {
           label={
             <Group gap="xs">
               <IconClock size={20} />
-              <span>Custom View</span>
+              <span>Custom Insights</span>
             </Group>
           }
           active={isCustomView}
@@ -2385,13 +2594,14 @@ const AppInsightsAIFlow = () => {
 
 // MarketplaceInsights component with all the charts from before
 const MarketplaceInsights = () => {
-  // Add state for drill-down modal
+  // Add state for drill-down modal and settings
   const [drillDownModalOpen, setDrillDownModalOpen] = useState(false);
   const [drillDownData, setDrillDownData] = useState<{
     title: string;
     dataPoint: any;
     results: any[];
   } | null>(null);
+  const [settingsModalOpened, setSettingsModalOpened] = useState(false);
 
   // Handler for chart point clicks
   const handleChartPointClick = (title: string, dataPoint: any) => {

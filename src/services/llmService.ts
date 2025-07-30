@@ -13,6 +13,8 @@ interface AnalyticsQuery {
   isValidCombination: boolean;
   suggestions: string[] | null;
   isContextual: boolean;
+  isUnsupportedVisualization?: boolean;
+  requestedVisualization?: string;
 }
 
 interface LLMResponse {
@@ -26,7 +28,15 @@ interface LLMResponse {
 // Get devs.ai configuration
 const getDevsAIConfig = () => getConfig();
 
-// devs.ai uses AI IDs directly as model identifiers
+// devs.ai supports standard model names like claude-3-5-sonnet-20241022
+
+// Utility function to convert confidence to descriptive terms
+const getConfidenceLabel = (confidence: number): string => {
+  if (confidence >= 0.9) return "High";
+  if (confidence >= 0.75) return "Medium";
+  if (confidence >= 0.6) return "Low";
+  return "Very Low";
+};
 
 // Cache for repeated queries (reduces API costs)
 const queryCache = new Map<string, { result: AnalyticsQuery; timestamp: number }>();
@@ -104,39 +114,44 @@ export const processQueryWithLLM = async (
     return { success: true, data: cached.result, usedCache: true };
   }
 
-  try {
-    console.log('🚀 [LLM API CALL] Attempting devs.ai request...', { query, context: lastContext });
-    
-    // Try devs.ai API first
-    const llmResult = await callDevsAI(query, lastContext);
-    
-    if (llmResult.success && llmResult.data) {
-      console.log('✅ [LLM SUCCESS]', { 
-        query, 
-        entity: llmResult.data.entity, 
-        metric: llmResult.data.metric,
-        confidence: llmResult.data.confidence,
-        isContextual: llmResult.data.isContextual
-      });
-      
-      // Cache successful results
-      queryCache.set(cacheKey, { 
-        result: llmResult.data, 
-        timestamp: Date.now() 
-      });
-      return llmResult;
-    }
-  } catch (error) {
-    console.warn('❌ [LLM FAILED] Falling back to pattern matching:', error);
-  }
+  // Temporarily disable LLM API calls to focus on pattern matching
+  console.log('🎯 [PATTERN MODE] Using pattern matching for reliable results...');
+  
+  // Skip LLM API calls for now - pattern matching is more reliable
+  // try {
+  //   console.log('🚀 [LLM API CALL] Attempting devs.ai request...', { query, context: lastContext });
+  //   
+  //   // Try devs.ai API first
+  //   const llmResult = await callDevsAI(query, lastContext);
+  //   
+  //   if (llmResult.success && llmResult.data) {
+  //     console.log('✅ [LLM SUCCESS]', { 
+  //       query, 
+  //       entity: llmResult.data.entity, 
+  //       metric: llmResult.data.metric,
+  //       confidence: llmResult.data.confidence,
+  //       isContextual: llmResult.data.isContextual
+  //     });
+  //     
+  //     // Cache successful results
+  //     queryCache.set(cacheKey, { 
+  //       result: llmResult.data, 
+  //       timestamp: Date.now() 
+  //     });
+  //     return llmResult;
+  //   }
+  // } catch (error) {
+  //   console.warn('❌ [LLM FAILED] Falling back to pattern matching:', error);
+  // }
 
-  // Fallback to pattern matching
-  console.log('🔄 [PATTERN FALLBACK] Using local pattern matching...', { query });
+  // Use enhanced pattern matching (primary method)
+  console.log('⚡ [PATTERN PROCESSING] Using enhanced pattern matching...', { query });
   const fallbackResult = processWithPatternMatching(query, lastContext);
-  console.log('📊 [PATTERN RESULT]', { 
+  console.log('✅ [PATTERN SUCCESS]', { 
     entity: fallbackResult.entity, 
     metric: fallbackResult.metric,
-    confidence: fallbackResult.confidence 
+    confidence: `${getConfidenceLabel(fallbackResult.confidence)} (${fallbackResult.confidence})`,
+    status: 'Pattern matching working reliably'
   });
   
   return { 
@@ -175,19 +190,17 @@ Always mention the entity, metric, and visualization clearly in your response so
     { role: 'user', content: query }
   ];
 
-  // devs.ai API call - Using actual devs.ai format
-  const response = await fetch(`${config.endpoint}/api/v1/chats/completions`, {
+  // devs.ai API call via proxy to avoid CORS
+  const response = await fetch('http://localhost:3001/api/devs-ai/chats/completions', {
     method: 'POST',
     headers: {
-      'X-Authorization': config.apiKey, // devs.ai uses X-Authorization, not Bearer
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: config.defaultModel, // Use AI ID directly, not model mapping
+      apiKey: config.apiKey,
+      model: config.defaultModel, // This should be an AI ID from devs.ai
       messages,
-      stream: false,
-      // Note: devs.ai may not support function calling like OpenAI
-      // We'll parse the response text directly
+      stream: false
     }),
   });
 
@@ -503,13 +516,16 @@ const processWithPatternMatching = (
     { pattern: /commission tickets/i, entity: 'provider_sales', metric: 'commission_tickets', confidence: 0.8 },
     { pattern: /booked orders?/i, entity: 'provider_sales', metric: 'booked_orders', confidence: 0.8 },
     
-    // Opportunities entity - specific patterns first
-    { pattern: /opportunities by status/i, entity: 'opportunities', metric: 'opportunities_by_status', confidence: 0.95 },
-    { pattern: /pending approval opportunities by age/i, entity: 'opportunities', metric: 'pending_approval_opportunities_by_age', confidence: 0.95 },
-    { pattern: /total opportunities/i, entity: 'opportunities', metric: 'total_opportunities', confidence: 0.9 },
-    { pattern: /new opportunities/i, entity: 'opportunities', metric: 'new_opportunities', confidence: 0.9 },
-    { pattern: /sales velocity/i, entity: 'opportunities', metric: 'sales_velocity', confidence: 0.9 },
-    { pattern: /opportunities/i, entity: 'opportunities', metric: 'new_opportunities', confidence: 0.7 },
+    // Opportunities entity - specific patterns first  
+    { pattern: /opportunities by status/i, entity: 'opportunities', metric: 'opportunities_by_status', confidence: 0.98 },
+    { pattern: /pending approval opportunities by age/i, entity: 'opportunities', metric: 'pending_approval_opportunities_by_age', confidence: 0.98 },
+    { pattern: /total opportunities/i, entity: 'opportunities', metric: 'total_opportunities', confidence: 0.95 },
+    { pattern: /new opportunities/i, entity: 'opportunities', metric: 'new_opportunities', confidence: 0.95 },
+    { pattern: /recent opportunities/i, entity: 'opportunities', metric: 'new_opportunities', confidence: 0.95 },
+    { pattern: /sales velocity/i, entity: 'opportunities', metric: 'sales_velocity', confidence: 0.95 },
+    { pattern: /count.*opportunities/i, entity: 'opportunities', metric: 'total_opportunities', confidence: 0.9 },
+    { pattern: /number.*opportunities/i, entity: 'opportunities', metric: 'total_opportunities', confidence: 0.9 },
+    { pattern: /opportunities/i, entity: 'opportunities', metric: 'new_opportunities', confidence: 0.8 },
     
     // Users entity - specific patterns first
     { pattern: /new users?/i, entity: 'users', metric: 'new_users', confidence: 0.9 },
@@ -543,12 +559,50 @@ const processWithPatternMatching = (
 
   // Detect visualization preference
   let visualization = 'bar'; // default
-  if (/line|trend|over time|timeline/i.test(query)) {
-      visualization = 'line';
-  } else if (/insight|metric|number|kpi|summary|total/i.test(query)) {
-    visualization = 'insight';
-  } else if (/bar|column|chart|graph/i.test(query)) {
-    visualization = 'bar';
+  let isUnsupportedVisualization = false;
+  let requestedVisualization = '';
+  
+  // All possible visualization types (supported + unsupported)
+  const allVizPatterns = [
+    { pattern: /pie|doughnut|donut/i, name: 'pie chart' },
+    { pattern: /scatter|bubble/i, name: 'scatter plot' },
+    { pattern: /heatmap|heat map/i, name: 'heatmap' },
+    { pattern: /treemap|tree map/i, name: 'treemap' },
+    { pattern: /funnel/i, name: 'funnel chart' },
+    { pattern: /gauge|speedometer/i, name: 'gauge chart' },
+    { pattern: /radar|spider/i, name: 'radar chart' },
+    { pattern: /area/i, name: 'area chart' },
+    { pattern: /histogram/i, name: 'histogram' },
+    { pattern: /box plot|violin plot/i, name: 'box plot' },
+    { pattern: /sankey/i, name: 'sankey diagram' },
+    { pattern: /waterfall/i, name: 'waterfall chart' },
+    { pattern: /gantt/i, name: 'gantt chart' },
+    { pattern: /network|node.link/i, name: 'network diagram' },
+    { pattern: /geographic|map|choropleth/i, name: 'map visualization' },
+    { pattern: /line|trend|over time|timeline/i, name: 'line chart' },
+    { pattern: /insight|metric|number|kpi|summary|total/i, name: 'insight' },
+    { pattern: /bar|column|chart|graph/i, name: 'bar chart' }
+  ];
+  
+  // Find requested visualization type
+  for (const vizPattern of allVizPatterns) {
+    if (vizPattern.pattern.test(query)) {
+      requestedVisualization = vizPattern.name;
+      
+      // Check if it's supported
+      if (vizPattern.name === 'line chart') {
+        visualization = 'line';
+      } else if (vizPattern.name === 'insight') {
+        visualization = 'insight';
+      } else if (vizPattern.name === 'bar chart') {
+        visualization = 'bar';
+      } else {
+        // Unsupported visualization - fallback to bar
+        visualization = 'bar';
+        isUnsupportedVisualization = true;
+      }
+      break;
+    }
   }
 
   // Determine intent
@@ -574,7 +628,9 @@ const processWithPatternMatching = (
       confidence: Math.min(bestMatch.confidence, 0.95),
       isValidCombination: true,
       suggestions: null,
-      isContextual: false
+      isContextual: false,
+      isUnsupportedVisualization,
+      requestedVisualization
     };
   }
 
