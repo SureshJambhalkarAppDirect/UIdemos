@@ -281,7 +281,7 @@ const LandingPage: React.FC = () => {
                 zIndex: 2
               }}
             >
-              AppConnectors UI Napkins
+              Napkins and Prototypes
             </Title>
             
             {/* Blueprint measurement lines */}

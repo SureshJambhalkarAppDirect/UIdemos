@@ -525,7 +525,7 @@ Date: Current analysis session
 This application uses a clean, decoupled architecture with React Router for URL management:
 
 ```
-/ → Landing Page (AppConnectors UI Napkins)
+/ → Landing Page (Napkins and Prototypes)
 /lga-flow/* → AC-14371: Large Government Agencies (fully isolated)
 /company-flow/* → Company Flow: Adobe Vendor Setup (fully isolated)
 ```
