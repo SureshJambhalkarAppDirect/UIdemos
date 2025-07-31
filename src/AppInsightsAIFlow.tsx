@@ -414,11 +414,11 @@ const processNaturalLanguageQuery = (query: string, lastContext?: { entity: stri
       
       // Check if it's supported
       if (vizPattern.name === 'line chart') {
-        visualization = 'line';
+      visualization = 'line';
       } else if (vizPattern.name === 'insight') {
-        visualization = 'insight';
+    visualization = 'insight';
       } else if (vizPattern.name === 'bar chart') {
-        visualization = 'bar';
+    visualization = 'bar';
       } else {
         // Unsupported visualization - fallback to bar
         visualization = 'bar';
@@ -442,11 +442,11 @@ const processNaturalLanguageQuery = (query: string, lastContext?: { entity: stri
   }
   
   if (bestMatch) {
-    return {
-      intent,
+  return {
+    intent,
       entity: bestMatch.entity,
       metric: bestMatch.metric,
-      visualization,
+    visualization,
       timeframe: 'last_12_months',
       confidence: Math.min(bestMatch.confidence, 0.95),
       isValidCombination: true,
@@ -1161,7 +1161,7 @@ const CustomView = () => {
         intent: analysis.intent,
         entity: analysis.entity 
       });
-
+      
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
@@ -1540,7 +1540,7 @@ const CustomView = () => {
             backgroundColor: '#f8f9fa'
           }}>
             <Group justify="space-between" align="center">
-              <Text fw={600} size="xl" c="#011B58">Ask Your Data Anything</Text>
+                  <Text fw={600} size="xl" c="#011B58">Ask Your Data Anything</Text>
               <CloseButton onClick={handleCancel} size="md" />
             </Group>
           </Box>
@@ -1550,7 +1550,7 @@ const CustomView = () => {
             <ScrollArea h="100%" scrollbars="y" ref={scrollAreaRef}>
               <Stack gap="lg" style={{ paddingTop: '24px', paddingBottom: '32px' }}>
                 {/* Conversation Messages */}
-                {messages.map((message, index) => (
+                    {messages.map((message, index) => (
                       <Group key={message.id} align="flex-start" gap="md">
                         <Box
                           style={{
@@ -1607,16 +1607,16 @@ const CustomView = () => {
                               {/* Chart and Button Container - Proper Alignment */}
                               <Group align="flex-end" justify="space-between" style={{ width: '100%' }}>
                                 {/* Mini Chart Preview */}
-                                <Box
-                                  style={{
+                              <Box
+                                style={{
                                     height: '200px',
-                                    width: '400px',
-                                    backgroundColor: '#f8f9fa',
-                                    borderRadius: '8px',
+                                  width: '400px',
+                                  backgroundColor: '#f8f9fa',
+                                  borderRadius: '8px',
                                     padding: '12px'
-                                  }}
-                                >
-                                  {message.insight.visualization === 'insight' ? (
+                                }}
+                              >
+                                {message.insight.visualization === 'insight' ? (
                                   /* Key Insight Display */
                                   <Box
                                     style={{
@@ -1745,10 +1745,10 @@ const CustomView = () => {
                                     )}
                                   </ResponsiveContainer>
                                 )}
-                                </Box>
+                              </Box>
 
                                 {/* Add to Dashboard Button - Bottom Aligned */}
-                                <Button 
+              <Button 
                                   size="sm"
                                   radius="md"
                                   leftSection={<IconChartLine size={16} />}
@@ -1765,8 +1765,8 @@ const CustomView = () => {
                                   }}
                                 >
                                   Add to Dashboard
-                                </Button>
-                              </Group>
+              </Button>
+            </Group>
                               
                               {/* Feedback Component for Insights */}
                               <Box mt="sm" pt="sm" style={{ borderTop: '1px solid #f0f0f0' }}>
@@ -1791,7 +1791,7 @@ const CustomView = () => {
                               }}
                             >
                               <Text size="sm" style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
-                                {message.content || "I'm not entirely sure what you're looking for. Could you try asking something like 'Show me revenue trends' or 'Display user growth over time'?"}
+                                    {message.content || "I'm not entirely sure what you're looking for. Could you try asking something like 'Show me revenue trends' or 'Display user growth over time'?"}
                               </Text>
                               
                               {/* Feedback Component for Suggestions */}
@@ -2030,7 +2030,7 @@ const CustomView = () => {
                     )}
 
                 {/* Suggested Questions as natural conversation elements */}
-                {(messages.length <= 1 || lastInsightContext) && (
+              {(messages.length <= 1 || lastInsightContext) && (
                   <Group align="flex-start" gap="md">
                     <Box
                       style={{
@@ -2049,105 +2049,105 @@ const CustomView = () => {
                     <Box flex={1}>
                       <Text size="sm" c="#011B58" fw={500} style={{ marginBottom: '12px', lineHeight: 1.6 }}>
                         {lastInsightContext ? `Based on your ${lastInsightContext.title}:` : 'Here are some things you can try:'}
-                      </Text>
-                      <Grid gutter="xs">
-                        {getContextualSuggestions().map((question, index) => (
-                          <Grid.Col key={index} span={6}>
-                            <Button
+                  </Text>
+                  <Grid gutter="xs">
+                    {getContextualSuggestions().map((question, index) => (
+                      <Grid.Col key={index} span={6}>
+                        <Button
                               variant="subtle"
-                              size="sm"
+                          size="sm"
                               radius="xl"
-                              fullWidth
+                          fullWidth
                               leftSection={<IconSparkles size={12} />}
-                              onClick={() => handleSendMessage(question)}
-                              style={{
+                          onClick={() => handleSendMessage(question)}
+                          style={{
                                 backgroundColor: 'rgba(6, 41, 211, 0.08)',
                                 border: '1px solid rgba(6, 41, 211, 0.2)',
                                 color: '#0629D3',
-                                fontWeight: 400,
-                                justifyContent: 'flex-start',
+                            fontWeight: 400,
+                            justifyContent: 'flex-start',
                                 height: 'auto',
                                 padding: '8px 12px',
                                 whiteSpace: 'normal',
                                 textAlign: 'left',
-                                '&:hover': {
+                            '&:hover': {
                                   backgroundColor: 'rgba(6, 41, 211, 0.12)',
                                   borderColor: '#0629D3'
-                                }
-                              }}
-                            >
+                            }
+                          }}
+                        >
                               <Text size="sm" style={{ lineHeight: 1.4 }}>
-                                {question}
-                              </Text>
-                            </Button>
-                          </Grid.Col>
-                        ))}
-                      </Grid>
-                    </Box>
+                            {question}
+                          </Text>
+                        </Button>
+                      </Grid.Col>
+                    ))}
+                  </Grid>
+                </Box>
                   </Group>
-                )}
+              )}
               </Stack>
             </ScrollArea>
           </Box>
 
           {/* Fixed Input Area at Bottom - Apple Style */}
-          <Box
-            style={{
+              <Box
+                style={{
               position: 'sticky',
               bottom: 0,
               backgroundColor: '#f8f9fa',
               borderTop: '1px solid #e5e7eb',
               padding: '20px 32px',
               backdropFilter: 'blur(8px)'
-            }}
-          >
-            <Group gap="md">
-              <TextInput
-                flex={1}
-                placeholder="Ask me anything about your business data..."
-                value={currentInput}
-                onChange={(e) => setCurrentInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                disabled={isProcessing}
-                size="md"
+                }}
+              >
+                <Group gap="md">
+                  <TextInput
+                    flex={1}
+                    placeholder="Ask me anything about your business data..."
+                    value={currentInput}
+                    onChange={(e) => setCurrentInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                    disabled={isProcessing}
+                    size="md"
                 radius="xl"
-                style={{
-                  '& .mantine-Input-input': {
+                    style={{
+                      '& .mantine-Input-input': {
                     border: '1px solid #e9ecef',
                     backgroundColor: '#f8f9fa',
-                    fontSize: '16px',
+                        fontSize: '16px',
                     padding: '12px 20px',
-                    '&:focus': {
-                      borderColor: '#0629D3',
+                        '&:focus': {
+                          borderColor: '#0629D3',
                       backgroundColor: 'white',
                       boxShadow: '0 0 0 3px rgba(6, 41, 211, 0.1)'
-                    }
-                  }
-                }}
-              />
-              <ActionIcon 
-                onClick={() => handleSendMessage()}
-                disabled={!currentInput.trim() || isProcessing}
+                        }
+                      }
+                    }}
+                  />
+                  <ActionIcon 
+                    onClick={() => handleSendMessage()}
+                    disabled={!currentInput.trim() || isProcessing}
                 size="lg"
                 radius="xl"
-                style={{
-                  background: currentInput.trim() && !isProcessing ? 
+                    style={{
+                      background: currentInput.trim() && !isProcessing ? 
                     '#0629D3' : 
                     '#e9ecef',
                   color: currentInput.trim() && !isProcessing ? 'white' : '#6c757d',
-                  border: 'none',
+                      border: 'none',
                   minWidth: '44px',
                   height: '44px',
-                  '&:hover': {
-                    background: currentInput.trim() && !isProcessing ? 
+                      '&:hover': {
+                        background: currentInput.trim() && !isProcessing ? 
                       '#0520b3' : 
                       '#dee2e6'
-                  }
-                }}
-              >
+                      }
+                    }}
+                  >
                 <IconSend size={18} />
-              </ActionIcon>
-            </Group>
+          </ActionIcon>
+        </Group>
           </Box>
         </Box>
       ) : insights.length === 0 ? (
