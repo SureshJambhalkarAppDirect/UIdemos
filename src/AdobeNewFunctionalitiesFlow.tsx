@@ -72,8 +72,8 @@ const AdobeNewFunctionalitiesHome: React.FC = () => {
                 />
               </ScrollArea>
 
-              {/* Price Lists Management - HIDDEN */}
-              <ScrollArea style={{ display: 'none' }}>
+              {/* Price Lists Management */}
+              <ScrollArea>
                 <PriceLists 
                   expanded={priceListsExpanded}
                   onToggle={() => setPriceListsExpanded(!priceListsExpanded)}

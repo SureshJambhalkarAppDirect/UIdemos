@@ -121,9 +121,13 @@ const MARKET_SEGMENTS = [
 
 const REGIONS = [
   { value: 'NA', label: 'North America' },
-  { value: 'EMEA', label: 'Europe, Middle East & Africa' },
-  { value: 'APAC', label: 'Asia Pacific' },
-  { value: 'LATAM', label: 'Latin America' },
+  { value: 'WE', label: 'Western Europe' },
+  { value: 'AP', label: 'Asia Pacific' },
+  { value: 'JP', label: 'Japan' },
+  { value: 'LA', label: 'Latin America' },
+  { value: 'MX', label: 'Mexico' },
+  { value: 'EE', label: 'Eastern Europe' },
+  { value: 'PA', label: 'Pacific' },
 ];
 
 const CURRENCIES = [
@@ -136,20 +140,38 @@ const CURRENCIES = [
 ];
 
 const PRODUCT_FAMILIES = [
-  { value: 'CREATIVE_CLOUD', label: 'Creative Cloud' },
-  { value: 'DOCUMENT_CLOUD', label: 'Document Cloud' },
-  { value: 'ACROBAT_DC', label: 'Acrobat DC' },
-  { value: 'STOCK', label: 'Adobe Stock' },
-  { value: 'SIGN', label: 'Adobe Sign' },
-  { value: 'SUBSTANCE', label: 'Substance' },
-  { value: 'FIREFLY', label: 'Adobe Firefly' },
+  { value: 'Creative Cloud', label: 'Creative Cloud' },
+  { value: 'Document Cloud', label: 'Document Cloud' },
+  { value: 'Adobe Stock', label: 'Adobe Stock' },
+  { value: 'Adobe Sign', label: 'Adobe Sign' },
+  { value: 'Substance 3D', label: 'Substance 3D' },
+  { value: 'Adobe Express', label: 'Adobe Express' },
+  { value: 'Cloud Services', label: 'Cloud Services' },
 ];
 
 const OFFER_ATTRIBUTES = [
-  { value: 'isPromotion', label: 'Promotion Status' },
-  { value: 'is3YCEligible', label: '3-Year Commit Eligibility' },
-  { value: 'supportedLanguages', label: 'Supported Languages' },
-  { value: 'platforms', label: 'Supported Platforms' },
+  { value: 'productType', label: 'Product Type' },
+  { value: 'productTypeDetail', label: 'Product Type Detail' },
+  { value: 'language', label: 'Language' },
+  { value: 'operatingSystem', label: 'Operating System' },
+  { value: 'version', label: 'Version' },
+  { value: 'users', label: 'Users/License Type' },
+  { value: 'levelDetails', label: 'Discount Level Details' },
+  { value: 'pool', label: 'Pool/Category' },
+  { value: 'duration', label: 'Duration' },
+  { value: 'additionalDetail', label: 'Additional Details' },
+  { value: 'firstOrderDate', label: 'First Order Date' },
+  { value: 'lastOrderDate', label: 'Last Order Date' },
+  { value: 'estimatedShipDate', label: 'Estimated Ship Date' },
+  { value: 'estimatedStreetPrice', label: 'Estimated Street Price' },
+  { value: 'publicAnnounceDate', label: 'Public Announce Date' },
+  { value: 'rmaRequestDeadline', label: 'RMA Request Deadline' },
+  { value: 'discountCode', label: 'Discount Code' },
+  { value: 'acdIndicator', label: 'ACD Status (Add/Change/Delete)' },
+  { value: 'acdEffectiveDate', label: 'ACD Effective Date' },
+  { value: 'metric', label: 'Unit of Measure' },
+  { value: 'upcEanCode', label: 'UPC/EAN Code' },
+  { value: 'gtinCode', label: 'GTIN Code' },
 ];
 
 export const PriceLists: React.FC<{
@@ -264,10 +286,14 @@ const GetPriceListsBlock: React.FC<{
     region: 'NA',
     marketSegment: 'COM',
     currency: 'USD',
-    priceListMonth: '202501', // January 2025
+    priceListMonth: '202507', // July 2025
     priceListType: 'STANDARD',
     filters: {},
-    includeOfferAttributes: ['productType', 'productTypeDetail', 'language'],
+    includeOfferAttributes: [
+      'productType', 'productTypeDetail', 'language', 'operatingSystem', 
+      'version', 'users', 'levelDetails', 'pool', 'duration', 'additionalDetail',
+      'firstOrderDate', 'lastOrderDate', 'estimatedShipDate', 'estimatedStreetPrice', 'discountCode'
+    ],
     limit: 50,
     offset: 0,
   });
@@ -331,10 +357,14 @@ const GetPriceListsBlock: React.FC<{
       region: 'NA',
       marketSegment: 'COM',
       currency: 'USD',
-      priceListMonth: '202501',
+      priceListMonth: '202507',
       priceListType: 'STANDARD',
       filters: {},
-      includeOfferAttributes: ['productType', 'productTypeDetail', 'language'],
+      includeOfferAttributes: [
+        'productType', 'productTypeDetail', 'language', 'operatingSystem', 
+        'version', 'users', 'levelDetails', 'pool', 'duration', 'additionalDetail',
+        'firstOrderDate', 'lastOrderDate', 'estimatedShipDate', 'estimatedStreetPrice', 'discountCode'
+      ],
       limit: 50,
       offset: 0,
     });
@@ -359,36 +389,12 @@ const GetPriceListsBlock: React.FC<{
     }
   };
 
-  const formatPrice = (price: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-    }).format(price);
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
     });
-  };
-
-  const getPriceTypeColor = (priceType: string) => {
-    switch (priceType) {
-      case 'SUBSCRIPTION': return 'blue';
-      case 'PERPETUAL': return 'green';
-      case 'CONSUMABLE': return 'orange';
-      default: return 'gray';
-    }
-  };
-
-  const getDiscountColor = (discountPercentage: number) => {
-    if (discountPercentage >= 30) return 'red';
-    if (discountPercentage >= 20) return 'orange';
-    if (discountPercentage >= 10) return 'yellow';
-    return 'gray';
   };
 
   const sortedOffers = priceListData?.offers.sort((a, b) => {
@@ -437,7 +443,7 @@ const GetPriceListsBlock: React.FC<{
                 placeholder="Select region"
                 data={REGIONS}
                 value={formData.region}
-                onChange={(value) => setFormData({ ...formData, region: value || 'US' })}
+                onChange={(value) => setFormData({ ...formData, region: value || 'NA' })}
                 required
               />
             </Grid.Col>
@@ -464,16 +470,29 @@ const GetPriceListsBlock: React.FC<{
           </Grid>
 
           <Grid>
-            <Grid.Col span={6}>
+            <Grid.Col span={4}>
               <TextInput
                 label="Price List Month"
-                placeholder="YYYY-MM"
+                placeholder="YYYYMM (e.g., 202507)"
                 value={formData.priceListMonth}
                 onChange={(event) => setFormData({ ...formData, priceListMonth: event.target.value })}
                 required
+                description="Format: YYYYMM (Year + Month)"
               />
             </Grid.Col>
-            <Grid.Col span={6}>
+            <Grid.Col span={4}>
+              <Select
+                label="Price List Type"
+                data={[
+                  { value: 'STANDARD', label: 'Standard' },
+                  { value: '3YC', label: '3-Year Commit' }
+                ]}
+                value={formData.priceListType}
+                onChange={(value) => setFormData({ ...formData, priceListType: value as 'STANDARD' | '3YC' || 'STANDARD' })}
+                required
+              />
+            </Grid.Col>
+            <Grid.Col span={4}>
               <Select
                 label="Product Family"
                 placeholder="All product families"
@@ -596,11 +615,14 @@ const GetPriceListsBlock: React.FC<{
                 </Group>
               </Group>
 
-              <ScrollArea>
-                <Table striped highlightOnHover>
+              <Text size="xs" color="dimmed" mb="xs" style={{ textAlign: 'center' }}>
+                💡 Scroll horizontally to view all columns
+              </Text>
+              <ScrollArea type="auto" style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+                <Table striped highlightOnHover style={{ minWidth: '1800px' }}>
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>
+                      <Table.Th style={{ minWidth: '60px' }}>
                         <Checkbox
                           checked={selectedOffers.size === priceListData.offers.length}
                           indeterminate={selectedOffers.size > 0 && selectedOffers.size < priceListData.offers.length}
@@ -614,39 +636,55 @@ const GetPriceListsBlock: React.FC<{
                         />
                       </Table.Th>
                       <Table.Th 
-                        style={{ cursor: 'pointer' }}
+                        style={{ cursor: 'pointer', minWidth: '140px' }}
                         onClick={() => handleSort('offerId')}
                       >
                         Offer ID {sortColumn === 'offerId' && (sortDirection === 'asc' ? '↑' : '↓')}
                       </Table.Th>
                       <Table.Th 
-                        style={{ cursor: 'pointer' }}
+                        style={{ cursor: 'pointer', minWidth: '180px' }}
                         onClick={() => handleSort('productFamily')}
                       >
                         Product Family {sortColumn === 'productFamily' && (sortDirection === 'asc' ? '↑' : '↓')}
                       </Table.Th>
                       <Table.Th 
-                        style={{ cursor: 'pointer' }}
+                        style={{ cursor: 'pointer', minWidth: '140px' }}
                         onClick={() => handleSort('productType')}
                       >
                         Product Type {sortColumn === 'productType' && (sortDirection === 'asc' ? '↑' : '↓')}
                       </Table.Th>
                       <Table.Th 
-                        style={{ cursor: 'pointer' }}
+                        style={{ cursor: 'pointer', minWidth: '100px' }}
+                        onClick={() => handleSort('productTypeDetail')}
+                      >
+                        Type Detail {sortColumn === 'productTypeDetail' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </Table.Th>
+                      <Table.Th 
+                        style={{ cursor: 'pointer', minWidth: '110px' }}
                         onClick={() => handleSort('partnerPrice')}
                       >
                         Partner Price {sortColumn === 'partnerPrice' && (sortDirection === 'asc' ? '↑' : '↓')}
                       </Table.Th>
                       <Table.Th 
-                        style={{ cursor: 'pointer' }}
+                        style={{ cursor: 'pointer', minWidth: '110px' }}
                         onClick={() => handleSort('estimatedStreetPrice')}
                       >
                         Street Price {sortColumn === 'estimatedStreetPrice' && (sortDirection === 'asc' ? '↑' : '↓')}
                       </Table.Th>
-                      <Table.Th>Discount</Table.Th>
-                      <Table.Th>Users</Table.Th>
-                      <Table.Th>OS</Table.Th>
-                      <Table.Th>Actions</Table.Th>
+                      <Table.Th 
+                        style={{ cursor: 'pointer', minWidth: '120px' }}
+                        onClick={() => handleSort('levelDetails')}
+                      >
+                        Level Details {sortColumn === 'levelDetails' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </Table.Th>
+                      <Table.Th style={{ minWidth: '80px' }}>Users</Table.Th>
+                      <Table.Th style={{ minWidth: '120px' }}>OS</Table.Th>
+                      <Table.Th style={{ minWidth: '80px' }}>Version</Table.Th>
+                      <Table.Th style={{ minWidth: '100px' }}>Duration</Table.Th>
+                      <Table.Th style={{ minWidth: '100px' }}>Pool</Table.Th>
+                      <Table.Th style={{ minWidth: '140px' }}>Language</Table.Th>
+                      <Table.Th style={{ minWidth: '200px' }}>Additional Details</Table.Th>
+                      <Table.Th style={{ minWidth: '80px' }}>Actions</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
@@ -667,19 +705,9 @@ const GetPriceListsBlock: React.FC<{
                           />
                         </Table.Td>
                         <Table.Td>
-                          <Stack gap="xs">
-                            <Text size="sm" fw={500}>
-                              {offer.productName}
-                            </Text>
-                            <Text size="xs" color="dimmed">
-                              {offer.description}
-                            </Text>
-                          </Stack>
-                        </Table.Td>
-                        <Table.Td>
                           <Group gap="xs">
-                            <Code>{offer.sku}</Code>
-                            <CopyButton value={offer.sku}>
+                            <Code>{offer.offerId}</Code>
+                            <CopyButton value={offer.offerId}>
                               {({ copied, copy }) => (
                                 <ActionIcon size="xs" color={copied ? 'teal' : 'gray'} onClick={copy}>
                                   {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
@@ -694,41 +722,63 @@ const GetPriceListsBlock: React.FC<{
                           </Badge>
                         </Table.Td>
                         <Table.Td>
+                          <Badge size="sm" variant="light" color="green">
+                            {offer.productType}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge size="sm" variant="light" color="blue">
+                            {offer.productTypeDetail || 'N/A'}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
                           <Text size="sm" fw={600}>
-                            {formatPrice(offer.unitPrice, offer.currency)}
+                            ${parseFloat(offer.partnerPrice || '0').toFixed(2)}
                           </Text>
                         </Table.Td>
                         <Table.Td>
                           <Text size="sm" color="dimmed">
-                            {formatPrice(offer.listPrice, offer.currency)}
+                            ${parseFloat(offer.estimatedStreetPrice || '0').toFixed(2)}
                           </Text>
                         </Table.Td>
                         <Table.Td>
-                          <Group gap="xs">
-                            <Badge 
-                              size="sm" 
-                              variant="light" 
-                              color={getDiscountColor(offer.discountPercentage)}
-                            >
-                              {offer.discountPercentage}%
-                            </Badge>
-                            <Text size="xs" color="dimmed">
-                              {offer.discountLevel}
-                            </Text>
-                          </Group>
-                        </Table.Td>
-                        <Table.Td>
-                          <Badge 
-                            size="sm" 
-                            variant="light" 
-                            color={getPriceTypeColor(offer.priceType)}
-                          >
-                            {offer.priceType}
+                          <Badge size="sm" variant="light" color="violet">
+                            {offer.levelDetails || 'N/A'}
                           </Badge>
                         </Table.Td>
                         <Table.Td>
                           <Text size="sm">
-                            {offer.billingCycle}
+                            {offer.users}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge size="sm" variant="light" color="gray">
+                            {offer.operatingSystem || 'N/A'}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text size="sm" color="dimmed">
+                            {offer.version || 'N/A'}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text size="sm" color="dimmed">
+                            {offer.duration || 'N/A'}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge size="sm" variant="light" color="orange">
+                            {offer.pool || 'N/A'}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text size="sm">
+                            {offer.language}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td style={{ minWidth: '200px', maxWidth: '200px' }}>
+                          <Text size="xs" style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: '1.3' }}>
+                            {offer.additionalDetail || 'N/A'}
                           </Text>
                         </Table.Td>
                         <Table.Td>

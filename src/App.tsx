@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { StagewiseToolbar } from '@stagewise/toolbar-react';
+import ReactPlugin from '@stagewise-plugins/react';
 import LandingPage from './LandingPage';
 import LGAFlow from './LGAFlow';
 import CompanyFlow from './CompanyFlow';
@@ -13,6 +15,7 @@ import AdminFlow from './AdminFlow';
 function App() {
   return (
     <Router>
+      <StagewiseToolbar config={{ plugins: [ReactPlugin] }} />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/lga-flow/*" element={<LGAFlow />} />
