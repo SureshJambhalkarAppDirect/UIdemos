@@ -281,7 +281,7 @@ const LandingPage: React.FC = () => {
                 zIndex: 2
               }}
             >
-              Napkins and Prototypes
+              Napkins an Prototypes
             </Title>
             
             {/* Blueprint measurement lines */}

@@ -48,6 +48,7 @@ const AdobeDiscountsFlow: React.FC = () => {
   const [showEditSuccess, setShowEditSuccess] = useState(false);
   const [savedDiscountCode, setSavedDiscountCode] = useState('');
   const [cartClickCount, setCartClickCount] = useState(0);
+  const [showBanner, setShowBanner] = useState(true);
 
   // All existing discounts (sample data + previously created)
   const existingDiscounts = [
@@ -273,6 +274,7 @@ const AdobeDiscountsFlow: React.FC = () => {
     setTimeout(() => {
       setCurrentView('discounts-listing');
       setShowSuccessMessage(false);
+      setShowBanner(false); // Hide banner after successful discount creation
     }, 2000);
   };
 
@@ -289,6 +291,11 @@ const AdobeDiscountsFlow: React.FC = () => {
   // Handle settings click
   const handleSettingsClick = () => {
     setCurrentView('main');
+  };
+
+  // Handle products click
+  const handleProductsClick = () => {
+    setCurrentView('discounts-listing');
   };
 
   // Handle row editing
@@ -1536,6 +1543,49 @@ const AdobeDiscountsFlow: React.FC = () => {
             </Button>
           </Group>
 
+          {/* Banner for Latest Adobe Discounts */}
+          {showBanner && (
+            <Card
+              withBorder={false}
+              radius="md"
+              mb="lg"
+              style={{
+                backgroundColor: '#f0f9ff',
+                border: '1px solid #bae6fd',
+                padding: '8px 16px',
+                position: 'relative'
+              }}
+            >
+              <Group justify="space-between" align="center">
+                <Text size="sm" c="#0369a1">
+                  Click{' '}
+                  <Text 
+                    component="span" 
+                    style={{ 
+                      color: '#0891b2', 
+                      textDecoration: 'underline', 
+                      cursor: 'pointer',
+                      fontWeight: 500
+                    }}
+                    onClick={() => setCurrentView('discounts')}
+                  >
+                    here
+                  </Text>
+                  {' '}to get latest Adobe discounts.
+                </Text>
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  size="sm"
+                  onClick={() => setShowBanner(false)}
+                  style={{ color: '#6b7280' }}
+                >
+                  <IconX size={14} />
+                </ActionIcon>
+              </Group>
+            </Card>
+          )}
+
           {/* Filters and Search */}
           <Group justify="space-between" align="center" mb="md">
             <Group gap="sm">
@@ -1743,6 +1793,49 @@ const AdobeDiscountsFlow: React.FC = () => {
             </Button>
           </Group>
 
+          {/* Banner for Latest Adobe Discounts */}
+          {showBanner && (
+            <Card
+              withBorder={false}
+              radius="md"
+              mb="lg"
+              style={{
+                backgroundColor: '#f0f9ff',
+                border: '1px solid #bae6fd',
+                padding: '8px 16px',
+                position: 'relative'
+              }}
+            >
+              <Group justify="space-between" align="center">
+                <Text size="sm" c="#0369a1">
+                  Click{' '}
+                  <Text 
+                    component="span" 
+                    style={{ 
+                      color: '#0891b2', 
+                      textDecoration: 'underline', 
+                      cursor: 'pointer',
+                      fontWeight: 500
+                    }}
+                    onClick={() => setCurrentView('discounts')}
+                  >
+                    here
+                  </Text>
+                  {' '}to get latest Adobe discounts.
+                </Text>
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  size="sm"
+                  onClick={() => setShowBanner(false)}
+                  style={{ color: '#6b7280' }}
+                >
+                  <IconX size={14} />
+                </ActionIcon>
+              </Group>
+            </Card>
+          )}
+
           {/* Filters and Search */}
           <Group justify="space-between" align="center" mb="md">
             <Group gap="sm">
@@ -1848,6 +1941,11 @@ const AdobeDiscountsFlow: React.FC = () => {
         }
         onMarketplaceClick={handleMarketplaceClick}
         onSettingsClick={handleSettingsClick}
+        onTabChange={(tab) => {
+          if (tab === 'products') {
+            handleProductsClick();
+          }
+        }}
       />
       
       {/* Main Layout */}
