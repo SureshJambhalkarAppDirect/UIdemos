@@ -40,6 +40,11 @@ const LandingPage: React.FC = () => {
       id: 'adobe-discounts',
       demo: 'Adobe Discounts',
       color: '#ea580c' // Professional orange for discounts theme
+    },
+    {
+      id: 'adobemig',
+      demo: 'Adobe VIPMP Migrations',
+      color: '#e11d48' // Rose/Pink - next in color sequence
     }
   ];
 

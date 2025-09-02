@@ -8,6 +8,7 @@ import AppInsightsAIFlow from './AppInsightsAIFlow';
 import AdobeRecommendationsFlow from './AdobeRecommendationsFlow';
 import AdobeNewFunctionalitiesFlow from './AdobeNewFunctionalitiesFlow';
 import AdobeDiscountsFlow from './AdobeDiscountsFlow';
+import AdobeVIPMPMigrationsFlow from './AdobeVIPMPMigrationsFlow';
 import AdminFlow from './AdminFlow';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
         <Route path="/adobe-recommendations/*" element={<AdobeRecommendationsFlow />} />
         <Route path="/adobe-new-functionalities/*" element={<AdobeNewFunctionalitiesFlow />} />
         <Route path="/adobe-discounts/*" element={<AdobeDiscountsFlow />} />
+        <Route path="/adobemig/*" element={<AdobeVIPMPMigrationsFlow />} />
         <Route path="/admin/*" element={<AdminFlow />} />
       </Routes>
     </Router>
