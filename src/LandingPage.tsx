@@ -45,6 +45,11 @@ const LandingPage: React.FC = () => {
       id: 'adobemig',
       demo: 'Adobe VIPMP Migrations',
       color: '#e11d48' // Rose/Pink - next in color sequence
+    },
+    {
+      id: 'adobe-checkout-slowness',
+      demo: 'Adobe Checkout Slowness',
+      color: '#f97316' // Orange - checkout/slowness theme
     }
   ];
 
@@ -341,7 +346,7 @@ const LandingPage: React.FC = () => {
         <Grid gutter="xl" justify="center">
           {napkins.map((napkin, index) => (
             <Grid.Col key={napkin.id} span={{ base: 12, md: 6, lg: 4 }}>
-              {napkin.id === 'company-flow' || napkin.id === 'adobesyncui' ? null : <NapkinCard napkin={napkin} index={index} />}
+              <NapkinCard napkin={napkin} index={index} />
             </Grid.Col>
           ))}
         </Grid>
